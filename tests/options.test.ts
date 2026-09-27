@@ -67,3 +67,25 @@ test("realised vol of a steady 1%-a-day zigzag", () => {
   const c = [100]; for (let i = 0; i < 40; i++) c.push(c[c.length - 1] * (i % 2 ? 1.01 : 0.99));
   close(realisedVol(c)!, 0.01 * Math.sqrt(252), 0.02);
 });
+
+import { decide } from "../lib/decision";
+
+test("decision: aligned bullish inputs → BUY CALL with levels; mixed → NO TRADE", () => {
+  const { bsPrice: bp } = require("../lib/options") as typeof import("../lib/options");
+  const T = 3 / 365, S = 100;
+  const rows = Array.from({ length: 21 }, (_, i) => 90 + i).map((k) => ({
+    strike: k, callOI: k > 103 ? 3000 : 800, putOI: k < 98 ? 5000 : 900, callIV: 0.18, putIV: 0.19,
+    callPrice: bp("call", S, k, T, 0.18), putPrice: bp("put", S, k, T, 0.19),
+  }));
+  const a = ac(rows, S, T);
+  const up = Array.from({ length: 60 }, (_, i) => 80 + i * 0.35); // steady uptrend ending ~100.7
+  const bull = decide({ spot: S, T, rows, a: { ...a, bias: "bullish" }, ivAtm: 0.18, rv: 0.16, closes: up, flows: { fiiNet: 3000, diiNet: 500 }, news: { bull: 5, bear: 1 }, step: 1 });
+  assert.equal(bull.action, "BUY CALL");
+  const tr = bull.trade!;
+  assert.ok(tr.strike <= S, "one strike in the money");
+  assert.ok(tr.stop < tr.entry && tr.entry < tr.target1 && tr.target1 <= tr.target2, "stop < entry < targets");
+  assert.ok(tr.invalidation < S && tr.under1 > S);
+  const mixed = decide({ spot: S, T, rows, a: { ...a, bias: "neutral", totalGex: -1 }, ivAtm: 0.18, rv: 0.2, closes: up, flows: { fiiNet: -3000, diiNet: 0 }, news: { bull: 0, bear: 4 }, step: 1 });
+  assert.equal(mixed.action, "NO TRADE");
+  assert.equal(mixed.trade, null);
+});

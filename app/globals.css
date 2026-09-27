@@ -590,3 +590,29 @@ details summary { cursor: pointer; }
   .strat-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .fno-expiries { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
 }
+
+/* ---- today's options call ---- */
+.call-card { display: flex; flex-direction: column; gap: 12px; color: inherit; border-left: 4px solid var(--line); }
+.call-card.good { border-left-color: var(--up); background: linear-gradient(90deg, rgba(34, 197, 94, 0.08), transparent 45%), var(--card); }
+.call-card.bad { border-left-color: var(--down); background: linear-gradient(90deg, rgba(244, 63, 94, 0.08), transparent 45%), var(--card); }
+.call-card.watch { border-left-color: var(--warn); }
+.call-action { font-size: 24px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0; }
+.call-card.good .call-action { color: var(--up); }
+.call-card.bad .call-action { color: var(--down); }
+.call-card.watch .call-action { color: var(--warn); }
+.call-card.none .call-action { color: var(--ink-2); }
+.call-conf { display: flex; align-items: baseline; gap: 2px; }
+.call-conf b { font-size: 28px; }
+.call-levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.call-levels > div { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line-soft); min-width: 0; }
+.call-levels b { font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.factor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.factor { display: flex; flex-direction: column; gap: 4px; padding: 10px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line-soft); }
+.fbar { position: relative; height: 6px; border-radius: 3px; background: var(--card-2); }
+.fbar::after { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line); }
+.fbar i { position: absolute; top: 0; bottom: 0; border-radius: 3px; }
+.fbar i.pos { left: 50%; background: var(--up); }
+.fbar i.neg { right: 50%; background: var(--down); }
+.grid.g3 .call-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.g3 .call-levels > div:first-child { grid-column: 1 / -1; }
+@media (max-width: 900px) { .call-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); } .call-levels > div:first-child { grid-column: 1 / -1; } }

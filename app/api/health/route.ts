@@ -8,6 +8,7 @@ import { stockIntraday } from "@/lib/market";
 import { candles as feed } from "@/lib/feeds";
 import { findInstrument } from "@/lib/instruments";
 import { derivDiag, fiiDii, getChain } from "@/lib/derivs";
+import { todayCall } from "@/lib/fnocall";
 import { analyseLiquidity } from "@/lib/liquidity";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 
@@ -44,6 +45,12 @@ export async function GET(req: Request) {
     gold: gold
       ? { source: gold.source, live: gold.live, price: gold.price, candles5m: gold.candles.length, stage: analyseLiquidity(gold.candles)?.stage ?? null }
       : null,
+    calls: new URL(req.url).searchParams.has("calls")
+      ? Object.fromEntries(await Promise.all((["NIFTY", "BTC", "ETH"] as const).map(async (u) => {
+          const r = await todayCall(u);
+          return [u, r.decision ? { action: r.decision.action, score: r.decision.score, confidence: r.decision.confidence, trade: r.decision.trade, factors: r.decision.factors.map((f) => `${f.name} ${f.score.toFixed(1)}: ${f.note}`) } : null];
+        })))
+      : undefined,
     fno: { nifty: ch(cNifty), sensex: ch(cSensex), btc: ch(cBtc), fiiDii: flows, diag: new URL(req.url).searchParams.has("diag") ? await derivDiag() : undefined },
     desks: { btc: fs(btc), eurusd: fs(eurusd), bnb: fs(bnb) },
     timeframes: { gold1m: g1m?.candles.length ?? 0, gold4h: g4h?.candles.length ?? 0, nvda1h: nvda1h?.length ?? 0, reliance4h: rel4h?.length ?? 0, reliance5m: rel5m?.length ?? 0 },

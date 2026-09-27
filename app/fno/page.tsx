@@ -8,6 +8,8 @@ import { headlineLean } from "@/lib/liquidity";
 import { ago, pct, tone } from "@/lib/format";
 import AutoRefresh from "@/components/AutoRefresh";
 import { GexChart, OIChart, Payoff, SmileChart } from "@/components/FnoCharts";
+import TodayCall from "@/components/TodayCall";
+import { decide, newsLean } from "@/lib/decision";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +28,7 @@ export default async function FnoPage({ searchParams }: { searchParams: Promise<
   const india = meta.market === "india";
   const [chain, daily, news, flows] = await Promise.all([
     getChain(u, sp.e ? Number(sp.e) : undefined),
-    getIntraday(SPOT_SYMBOL[u], "1d", "3mo", 900),
+    getIntraday(SPOT_SYMBOL[u], "1d", "6mo", 900),
     headlines(NEWS[u], 10),
     india ? fiiDii() : Promise.resolve(null),
   ]);
@@ -75,6 +77,12 @@ export default async function FnoPage({ searchParams }: { searchParams: Promise<
   const greekRows = show.slice(Math.max(0, atmIdx - 6), atmIdx + 7);
   const perp = chain.futures.find((f) => f.name === "Perpetual");
   const ratio = rv && ivAtm ? ivAtm / rv : null;
+  const decision = decide({
+    spot, T, rows: chain.rows, a, ivAtm: a.atmIV, rv, closes: (daily?.candles ?? []).map((c) => c.c),
+    flows: flows ? { fiiNet: flows.fiiNet, diiNet: flows.diiNet } : null,
+    funding8h: chain.futures.find((f) => f.name === "Perpetual")?.funding8h ?? null,
+    news: newsLean(news.map((n) => n.title), headlineLean), step,
+  });
   const biasCls = a.bias === "bullish" ? "good" : a.bias === "bearish" ? "bad" : "none";
 
   return (
@@ -99,6 +107,10 @@ export default async function FnoPage({ searchParams }: { searchParams: Promise<
       </section>
 
       {!chain.live && <p className="note small" style={{ marginTop: 12 }}>Indian option data comes from the exchange website and runs a few minutes behind. Connect a broker API for tick-by-tick data.</p>}
+
+      <div style={{ marginTop: 12 }}>
+        <TodayCall d={decision} cur={cur} name={meta.name} expiryLabel={chain.expiries.find((e) => e.ts === chain.expiry)?.label} />
+      </div>
 
       <div className="grid g4" style={{ marginTop: 12 }}>
         <div className="card tight kpi"><div className="label">Put / Call ratio</div><div className="val">{a.pcr?.toFixed(2) ?? "—"}</div><div className="small muted">by open interest</div></div>
