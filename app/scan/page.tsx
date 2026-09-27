@@ -7,6 +7,8 @@ import type { Market } from "@/lib/plan";
 
 import AutoRefresh from "@/components/AutoRefresh";
 import Logo from "@/components/Logo";
+import StarButton from "@/components/StarButton";
+import { getWatchlist } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
   const missing = scan.rows.filter((r) => !r.analysis).map((r) => r.stock.symbol);
   const counts = (["confirmed", "ready", "watch"] as Status[]).map((s) => [s, rows.filter((r) => r.analysis!.best.status === s).length] as const);
   const q = scan.index.quote;
+  const starred = new Set((await getWatchlist()).map((w) => `${w.market}:${w.symbol}`));
 
   const href = (m: Market, f: string) => `/scan?m=${m}&f=${f}`;
   return (
@@ -102,10 +105,13 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
               return (
                 <tr key={stock.symbol}>
                   <td>
-                    <Link href={`/stock/${market}/${encodeURIComponent(stock.symbol)}`} className="who-wrap">
-                      <Logo symbol={stock.symbol} market={market} size={30} />
-                      <span><b>{stock.symbol}</b><div className="small muted">{stock.name}</div></span>
-                    </Link>
+                    <div className="row" style={{ gap: 8, flexWrap: "nowrap" }}>
+                      <StarButton symbol={stock.symbol} market={market} starred={starred.has(`${market}:${stock.symbol}`)} />
+                      <Link href={`/stock/${market}/${encodeURIComponent(stock.symbol)}`} className="who-wrap">
+                        <Logo symbol={stock.symbol} market={market} size={30} />
+                        <span><b>{stock.symbol}</b><div className="small muted">{stock.name}</div></span>
+                      </Link>
+                    </div>
                   </td>
                   <td className="num">{quote ? money(quote.price, market) : "—"}</td>
                   <td className={`num ${tone(quote?.changePct)}`}>{quote ? pct(quote.changePct) : "—"}</td>

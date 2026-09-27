@@ -6,7 +6,7 @@
 // a small page that says you are offline.
 
 const OFFLINE = "/offline.html";
-const CACHE = "swing-desk-shell-v2";
+const CACHE = "swing-desk-shell-v3";
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll([OFFLINE, "/icon-192.png"])));
@@ -32,7 +32,7 @@ self.addEventListener("push", (e) => {
     self.registration.showNotification(d.title || "SIGMORA", {
       body: d.body || "",
       icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      badge: "/badge-96.png", // white silhouette: Android draws this in the status bar
       tag: d.tag,
       renotify: true,
       data: { url: d.url || "/" },

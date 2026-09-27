@@ -3,11 +3,12 @@ import Logo from "./Logo";
 import Sparkline from "./Sparkline";
 import StarButton from "./StarButton";
 import MiniChart from "./MiniChart";
+import InstrumentLogo from "./InstrumentLogo";
 import { analyseOne } from "@/lib/scan";
 import { candles } from "@/lib/feeds";
 import { analyseLiquidity, nyDesk, prevDayClose } from "@/lib/liquidity";
 import { DESKS, deskInstruments, fmtPrice, type Instrument } from "@/lib/instruments";
-import { findStock } from "@/lib/universe";
+import { resolveStock } from "@/lib/stocks";
 import { STATUS_LABEL } from "@/lib/setup";
 import { scoreRules, tradeable } from "@/lib/score";
 import { money, pct, tone } from "@/lib/format";
@@ -34,27 +35,9 @@ type Tile = {
   span: string;
 };
 
-const BADGE: Record<string, [string, string]> = {
-  XAUUSD: ["Au", "linear-gradient(135deg,#f5d77a,#b8860b)"],
-  XAGUSD: ["Ag", "linear-gradient(135deg,#e5e7eb,#9ca3af)"],
-  USOIL: ["WTI", "linear-gradient(135deg,#374151,#111827)"],
-  UKOIL: ["BRN", "linear-gradient(135deg,#374151,#111827)"],
-  NATGAS: ["NG", "linear-gradient(135deg,#60a5fa,#1e3a8a)"],
-  BTC: ["₿", "linear-gradient(135deg,#f7931a,#c26a00)"],
-  ETH: ["Ξ", "linear-gradient(135deg,#8c8cf7,#454a75)"],
-  SOL: ["◎", "linear-gradient(135deg,#14f195,#9945ff)"],
-  XRP: ["✕", "linear-gradient(135deg,#6b7280,#111827)"],
-  BNB: ["B", "linear-gradient(135deg,#f3ba2f,#b8860b)"],
-  DOGE: ["Ð", "linear-gradient(135deg,#e1c16e,#a0822e)"],
-  ADA: ["₳", "linear-gradient(135deg,#3b82f6,#0033ad)"],
-  AVAX: ["A", "linear-gradient(135deg,#f87171,#b91c1c)"],
-  LINK: ["⬡", "linear-gradient(135deg,#60a5fa,#2a5ada)"],
-  LTC: ["Ł", "linear-gradient(135deg,#cbd5e1,#64748b)"],
-};
-
+/** Kept for callers that import Badge: the real instrument logo. */
 export function Badge({ inst }: { inst: Instrument }) {
-  const [text, bg] = BADGE[inst.id] ?? [inst.id.slice(0, 3), "linear-gradient(135deg,#7c3aed,#22d3ee)"];
-  return <span className="logo logo-fallback" style={{ width: 36, height: 36, borderRadius: 10, background: bg, fontSize: text.length > 2 ? 10 : 15 }} aria-hidden="true">{text}</span>;
+  return <InstrumentLogo inst={inst} size={36} />;
 }
 
 const STAGE_TEXT: Record<string, [string, string]> = {
@@ -73,7 +56,7 @@ const STAGE_TEXT: Record<string, [string, string]> = {
 
 async function stockTile(w: Watch, starred: boolean): Promise<Tile | null> {
   if (w.market !== "IN" && w.market !== "US") return null;
-  const stock = findStock(w.symbol, w.market);
+  const stock = await resolveStock(w.symbol, w.market);
   if (!stock) return null;
   const live = await analyseOne(stock);
   const a = live.analysis;
@@ -162,10 +145,10 @@ export default async function Favourites({ list, suggested }: { list: Watch[]; s
   return (
     <section className="favs">
       <div className="row between" style={{ marginBottom: 10 }}>
-        <h2 className="section-title" style={{ margin: 0 }}>⭐ My favourites</h2>
+        <h2 className="section-title" style={{ margin: 0 }}>⭐ My favourites <a href="/favourites" className="btn small" style={{ marginLeft: 8, verticalAlign: "middle" }}>✎ Edit</a></h2>
         <span className="small muted">
           {hot ? <b className="up">{hot} setup{hot > 1 ? "s" : ""} ready</b> : "No setup ready right now"}
-          {suggested ? " · starter list — tap ☆ on any stock, XAU/forex or crypto to build yours" : " · tap ★ to remove"}
+          {suggested ? " · starter list — tap ✎ Edit to add or remove" : " · first three shown as charts"}
         </span>
       </div>
       {/* Your first three favourites as small live charts, side by side. Tap to open the full chart. */}

@@ -10,7 +10,8 @@ import { db, allowedEmail } from "@/lib/supabase/server";
 import { getSettings, recentClosed } from "@/lib/data";
 import { analyseOne } from "@/lib/scan";
 import { findStock } from "@/lib/universe";
-import { deskInstruments } from "@/lib/instruments";
+import { deskInstruments, INSTRUMENTS } from "@/lib/instruments";
+import { resolveStock, searchStocks } from "@/lib/stocks";
 import type { FavMarket } from "@/lib/data";
 import { plan, resultR, type Market } from "@/lib/plan";
 import { runGate, type Check } from "@/lib/gate";
@@ -80,7 +81,7 @@ export async function takeTrade(_: FormState, form: FormData): Promise<FormState
   const symbol = String(form.get("symbol") ?? "");
   const market = String(form.get("market") ?? "") as Market;
   const side = String(form.get("side") ?? "long") as Side;
-  const stock = findStock(symbol, market);
+  const stock = findStock(symbol, market) ?? (await resolveStock(symbol, market));
   if (!stock || (side !== "long" && side !== "short")) return { ok: false, message: "Unknown stock." };
 
   const [settings, recent, live] = await Promise.all([getSettings(), recentClosed(), analyseOne(stock)]);
@@ -216,18 +217,23 @@ export async function importSheetHoldings() {
 // ---- favourites ------------------------------------------------------------
 
 /** Star / unstar a stock. Returns the new state. */
+/** The display name for a favourite, or null if it doesn't exist. */
+async function favName(symbol: string, market: FavMarket): Promise<string | null> {
+  if (market === "FX" || market === "CRYPTO") return deskInstruments(market === "FX" ? "fx" : "crypto").find((i) => i.id === symbol)?.name ?? null;
+  if (market !== "IN" && market !== "US") return null;
+  return (await resolveStock(symbol, market))?.name ?? null;
+}
+
 export async function toggleWatch(symbol: string, market: FavMarket): Promise<boolean> {
-  const known =
-    market === "FX" ? deskInstruments("fx").some((i) => i.id === symbol)
-    : market === "CRYPTO" ? deskInstruments("crypto").some((i) => i.id === symbol)
-    : (market === "IN" || market === "US") && !!findStock(symbol, market);
-  if (!known) return false;
+  const name = await favName(symbol, market);
+  if (!name) return false;
   const supabase = await db();
   const { data } = await supabase.from("watchlist").select("symbol").eq("symbol", symbol).eq("market", market).maybeSingle();
   if (data) {
     await supabase.from("watchlist").delete().eq("symbol", symbol).eq("market", market);
   } else {
-    await supabase.from("watchlist").insert({ symbol, market });
+    const { data: last } = await supabase.from("watchlist").select("position").order("position", { ascending: false }).limit(1).maybeSingle();
+    await supabase.from("watchlist").insert({ symbol, market, name, position: (last?.position ?? 0) + 1 });
   }
   revalidatePath("/");
   revalidatePath("/fx");
@@ -310,4 +316,70 @@ export async function signOutEverywhere() {
   const supabase = await db();
   await supabase.auth.signOut({ scope: "global" });
   redirect("/login");
+}
+
+export type SearchHit = { symbol: string; name: string; market: FavMarket; kind: string };
+
+/** Search stocks (NSE / US), forex & commodities and crypto for the favourites manager. */
+export async function searchMarkets(q: string): Promise<SearchHit[]> {
+  const query = q.trim().toUpperCase();
+  if (!query) return [];
+  const desk: SearchHit[] = INSTRUMENTS.filter((i) => i.id.includes(query) || i.short.toUpperCase().includes(query) || i.name.toUpperCase().includes(query)).map((i) => ({
+    symbol: i.id, name: i.name, market: i.kind === "fx" ? "FX" : "CRYPTO", kind: i.kind === "fx" ? i.group : "Crypto",
+  }));
+  const stocks = (await searchStocks(q)).map((s) => ({ symbol: s.symbol, name: s.name, market: s.market, kind: s.exchange }));
+  // A bare ticker typed exactly is offered even if search missed it (validated on add).
+  const exact: SearchHit[] = /^[A-Z0-9&.\-]{1,15}$/.test(query) && !stocks.some((s) => s.symbol === query)
+    ? [{ symbol: query, name: `${query} (NSE ticker)`, market: "IN", kind: "NSE" }, { symbol: query, name: `${query} (US ticker)`, market: "US", kind: "US" }]
+    : [];
+  return [...desk, ...stocks, ...exact].slice(0, 16);
+}
+
+export async function addFavourite(symbol: string, market: FavMarket): Promise<FormState> {
+  const name = await favName(symbol.toUpperCase(), market);
+  if (!name) return { ok: false, message: `${symbol.toUpperCase()} wasn't found — no prices for it on ${market === "IN" ? "NSE" : market}.` };
+  const supabase = await db();
+  const { data: exists } = await supabase.from("watchlist").select("symbol").eq("symbol", symbol.toUpperCase()).eq("market", market).maybeSingle();
+  if (exists) return { ok: true, message: "Already in your favourites." };
+  const { data: last } = await supabase.from("watchlist").select("position").order("position", { ascending: false }).limit(1).maybeSingle();
+  const { error } = await supabase.from("watchlist").insert({ symbol: symbol.toUpperCase(), market, name, position: (last?.position ?? 0) + 1 });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/");
+  revalidatePath("/favourites");
+  return { ok: true, message: `${name} added.` };
+}
+
+export async function removeFavourite(symbol: string, market: FavMarket) {
+  const supabase = await db();
+  await supabase.from("watchlist").delete().eq("symbol", symbol).eq("market", market);
+  revalidatePath("/");
+  revalidatePath("/favourites");
+}
+
+/** Move a favourite up or down (the first three are the dashboard charts). */
+export async function moveFavourite(symbol: string, market: FavMarket, dir: -1 | 1) {
+  const supabase = await db();
+  const { data } = await supabase.from("watchlist").select("symbol,market").order("position").order("created_at");
+  const list = data ?? [];
+  const i = list.findIndex((w) => w.symbol === symbol && w.market === market);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  await Promise.all(list.map((w, k) => supabase.from("watchlist").update({ position: k + 1 }).eq("symbol", w.symbol).eq("market", w.market)));
+  revalidatePath("/");
+  revalidatePath("/favourites");
+}
+
+/** Replace the starter list with real favourites the first time you edit them. */
+export async function adoptStarterFavourites() {
+  const supabase = await db();
+  const { count } = await supabase.from("watchlist").select("symbol", { count: "exact", head: true });
+  if ((count ?? 0) > 0) return;
+  await supabase.from("watchlist").insert([
+    { symbol: "XAUUSD", market: "FX", name: "Gold", position: 1 },
+    { symbol: "BTC", market: "CRYPTO", name: "Bitcoin", position: 2 },
+    { symbol: "NVDA", market: "US", name: "NVIDIA Corporation", position: 3 },
+  ]);
+  revalidatePath("/");
+  revalidatePath("/favourites");
 }

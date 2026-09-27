@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { analyseOne, chartBars } from "@/lib/scan";
-import { findStock } from "@/lib/universe";
+import { resolveStock } from "@/lib/stocks";
+import { getWatchlist } from "@/lib/data";
+import StarButton from "@/components/StarButton";
 import { ema } from "@/lib/indicators";
 import { plan, type Market } from "@/lib/plan";
 import { STATUS_LABEL, type SideResult } from "@/lib/setup";
@@ -44,7 +46,8 @@ export default async function StockPage({ params, searchParams }: { params: Prom
   const { tf: tfRaw } = await searchParams;
   const tf: StockTf = (STOCK_TFS as string[]).includes(tfRaw ?? "") ? (tfRaw as StockTf) : "1d";
   const market: Market = m === "US" ? "US" : "IN";
-  const stock = findStock(decodeURIComponent(raw), market);
+  const [stock, watch] = await Promise.all([resolveStock(raw, market), getWatchlist()]);
+  const starred = !!stock && watch.some((w) => w.symbol === stock.symbol && w.market === market);
   if (!stock) notFound();
 
   const [live, settings, recent, intraday] = await Promise.all([
@@ -85,7 +88,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
       <div className="row between">
         <div>
           <Link href={`/scan?m=${market}`} className="small muted">← {market === "IN" ? "India" : "US"} stocks</Link>
-          <h1 className="who-wrap"><Logo symbol={stock.symbol} market={stock.market} size={44} />{stock.symbol} <span className="muted" style={{ fontSize: 16, fontWeight: 400 }}>{stock.name}</span></h1>
+          <h1 className="who-wrap"><Logo symbol={stock.symbol} market={stock.market} size={44} />{stock.symbol} <span className="muted" style={{ fontSize: 16, fontWeight: 400 }}>{stock.name}</span> <StarButton symbol={stock.symbol} market={market} starred={starred} /></h1>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 26, fontWeight: 700 }}>{money(quote.price, market)}</div>

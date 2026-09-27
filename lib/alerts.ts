@@ -17,7 +17,7 @@ import { candles } from "./feeds";
 import { analyseLiquidity, nyDesk } from "./liquidity";
 import { INSTRUMENTS, fmtPrice, type Instrument } from "./instruments";
 import { analyseOne } from "./scan";
-import { findStock } from "./universe";
+import { resolveStock } from "./stocks";
 import { STATUS_LABEL } from "./setup";
 
 const APP = "https://swing-trading-app-seven.vercel.app";
@@ -98,7 +98,7 @@ async function deskAlerts(inst: Instrument, p: AlertPrefs, now: number): Promise
 }
 
 async function stockAlerts(symbol: string, market: "IN" | "US"): Promise<Alert[]> {
-  const stock = findStock(symbol, market);
+  const stock = await resolveStock(symbol, market);
   if (!stock) return [];
   const a = (await analyseOne(stock)).analysis;
   if (!a || (a.best.status !== "ready" && a.best.status !== "confirmed")) return [];

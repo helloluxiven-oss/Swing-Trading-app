@@ -632,3 +632,22 @@ details summary { cursor: pointer; }
 }
 /* Long pills (news events, ranges) wrap instead of pushing past the screen edge. */
 .chips .pill, .hero-today .pill, .lvl-state .pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
+
+/* ---- favourites manager ---- */
+.fav-hits, .fav-order { list-style: none; margin: 0; padding: 0; }
+.fav-hits li, .fav-order li { display: flex; align-items: center; gap: 10px; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+.fav-hits li > div { min-width: 0; }
+.fav-order li.top3 { background: linear-gradient(90deg, rgba(34, 197, 94, 0.06), transparent 60%); }
+.fav-order-name { display: flex; flex-direction: column; min-width: 0; flex: 1; color: inherit; }
+.fav-order-name .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fav-order-btns { display: flex; gap: 4px; flex: none; }
+.fav-order-btns .btn { min-width: 36px; }
+.star { min-height: 32px; min-width: 32px; }
+
+/* ---- instrument logos (coins, flag pairs, commodities) ---- */
+.ilogo { position: relative; display: inline-block; flex: none; }
+.ilogo img { display: block; width: 100%; height: 100%; border-radius: 50%; }
+.ilogo.pair img { position: absolute; border-radius: 50%; box-shadow: 0 0 0 2px var(--card); object-fit: cover; }
+.ilogo.pair img.b { left: 0; top: 0; z-index: 1; }
+.ilogo.pair img.q { right: 0; bottom: 0; }
+.ichip-name { display: inline-flex; align-items: center; gap: 6px; }

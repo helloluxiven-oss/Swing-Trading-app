@@ -8,6 +8,7 @@ import type { Drawings } from "@/components/chart/annotations";
 import AutoRefresh from "@/components/AutoRefresh";
 import SweepAlert from "@/components/SweepAlert";
 import InstrumentStrip from "@/components/InstrumentStrip";
+import InstrumentLogo from "@/components/InstrumentLogo";
 import StarButton from "@/components/StarButton";
 import { getWatchlist } from "@/lib/data";
 
@@ -114,7 +115,8 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
           <div className="row between">
             <div>
               <div className="small muted">{DESKS[kind].title} · <b style={{ color: "var(--ink)" }}>{inst.name}</b> · {data.source} · updated {ago(data.time)}</div>
-              <div className="row" style={{ gap: 12, alignItems: "baseline" }}>
+              <div className="row" style={{ gap: 12, alignItems: "center" }}>
+                <InstrumentLogo inst={inst} size={40} />
                 <div className="big-num">{fp(data.price)}</div>
                 <b className={tone(dayPct)}>{pct(dayPct)}</b>
               </div>
@@ -231,7 +233,8 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
         <div className="row between">
           <div>
             <div className="small muted">{DESKS[kind].title} · <b style={{ color: "var(--ink)" }}>{inst.name}</b> · {data.source} · updated {ago(data.time)}</div>
-            <div className="row" style={{ gap: 12, alignItems: "baseline" }}>
+            <div className="row" style={{ gap: 12, alignItems: "center" }}>
+              <InstrumentLogo inst={inst} size={40} />
               <div className="big-num">{fp(data.price)}</div>
               <b className={tone(dayPct)}>{pct(dayPct)}</b>
             </div>

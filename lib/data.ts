@@ -122,11 +122,11 @@ export async function getHoldings(): Promise<Holding[]> {
 
 /** Favourite markets: stocks (IN/US), forex & commodities (FX), crypto (CRYPTO). */
 export type FavMarket = Market | "FX" | "CRYPTO";
-export type Watch = { symbol: string; market: FavMarket };
+export type Watch = { symbol: string; market: FavMarket; name?: string | null; position?: number };
 
 export async function getWatchlist(): Promise<Watch[]> {
   const supabase = await db();
-  const { data } = await supabase.from("watchlist").select("symbol,market").order("created_at");
+  const { data } = await supabase.from("watchlist").select("symbol,market,name,position").order("position").order("created_at");
   return (data ?? []) as Watch[];
 }
 
