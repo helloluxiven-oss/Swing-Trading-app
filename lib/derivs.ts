@@ -10,7 +10,7 @@
 //   FII / DII cash-market flows — NSE's daily provisional figures.
 
 import "server-only";
-import type { ChainRow } from "./options";
+import { bsPrice, type ChainRow } from "./options";
 import { getIntraday } from "./market";
 
 export type Underlying = "NIFTY" | "SENSEX" | "BTC" | "ETH";
@@ -32,6 +32,8 @@ export type Chain = {
   futures: Future[];
   volIndex: { name: string; value: number; change: number | null } | null;
   source: string;
+  /** Set when the chain is modelled rather than quoted (e.g. SENSEX from NIFTY). */
+  proxy?: string;
   live: boolean;
   time: number;
 };
@@ -280,8 +282,59 @@ async function sensexChain(pick?: number): Promise<Chain | null> {
   };
 }
 
+/** Next SENSEX weekly expiry: Thursday 15:30 IST (10:00 UTC), today if before the close. */
+function nextThursdayExpiry(now = Date.now()) {
+  const d = new Date(now);
+  for (let i = 0; i < 8; i++) {
+    const t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + i, 10);
+    if (new Date(t).getUTCDay() === 4 && t > now) return t / 1000;
+  }
+  return now / 1000 + 7 * 86400;
+}
+
+/**
+ * SENSEX options modelled from NIFTY's live chain. The two indices move almost
+ * one-for-one, so each SENSEX strike takes NIFTY's implied vol and open-interest
+ * shape at the same distance from spot (moneyness), and is priced with
+ * Black-Scholes to SENSEX's own Thursday expiry. Prices are estimates, not quotes.
+ */
+async function sensexProxy(): Promise<Chain | null> {
+  const [nifty, sx] = await Promise.all([niftyChain(), getIntraday("^BSESN", "1d", "3mo", 120)]);
+  if (!nifty || !nifty.rows.length || !sx) return null;
+  const S = sx.price, N0 = nifty.spot;
+  const nRows = nifty.rows.filter((r) => r.callIV || r.putIV);
+  const at = (m: number) => {
+    // nearest NIFTY row by moneyness (strike / spot)
+    return nRows.reduce((b, r) => (Math.abs(r.strike / N0 - m) < Math.abs(b.strike / N0 - m) ? r : b), nRows[0]);
+  };
+  const expiry = nextThursdayExpiry();
+  const T = Math.max(expiry - Date.now() / 1000, 3600) / (365 * 86400);
+  const rows: ChainRow[] = [];
+  const lo = Math.floor((S * 0.93) / 100) * 100, hi = Math.ceil((S * 1.07) / 100) * 100;
+  const scale = (S / N0) * 0.35; // SENSEX lots are smaller and volumes lower; keep OI as a shape, not a count
+  for (let k = lo; k <= hi; k += 100) {
+    const n = at(k / S);
+    const civ = n.callIV ?? n.putIV ?? 0.14, piv = n.putIV ?? n.callIV ?? 0.14;
+    rows.push({
+      strike: k,
+      callOI: Math.round(n.callOI * scale), putOI: Math.round(n.putOI * scale),
+      callOIChg: Math.round((n.callOIChg ?? 0) * scale), putOIChg: Math.round((n.putOIChg ?? 0) * scale),
+      callIV: civ, putIV: piv,
+      callPrice: +bsPrice("call", S, k, T, civ, 0.065).toFixed(2), putPrice: +bsPrice("put", S, k, T, piv, 0.065).toFixed(2),
+    });
+  }
+  return {
+    underlying: "SENSEX", spot: S,
+    expiries: [{ ts: expiry, label: new Date(expiry * 1000).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "2-digit", timeZone: "UTC" }) }],
+    expiry, rows, futures: [], volIndex: nifty.volIndex,
+    source: "Modelled from NIFTY's live option chain",
+    proxy: "BSE blocks cloud servers, so SENSEX options are modelled from NIFTY's live chain: NIFTY's implied volatility and open-interest shape at the same distance from spot, priced to SENSEX's Thursday expiry. Premiums are estimates — check the real SENSEX price in your broker app before trading.",
+    live: false, time: Math.floor(Date.now() / 1000),
+  };
+}
+
 export async function getChain(u: Underlying, expiry?: number): Promise<Chain | null> {
-  const c = u === "BTC" || u === "ETH" ? await cryptoChain(u, expiry) : u === "NIFTY" ? await niftyChain(expiry) : await sensexChain(expiry);
+  const c = u === "BTC" || u === "ETH" ? await cryptoChain(u, expiry) : u === "NIFTY" ? await niftyChain(expiry) : (await sensexChain(expiry)) ?? (await sensexProxy());
   if (c && !c.futures.length) {
     // No futures quote: use the market-implied forward from put-call parity at the ATM strike (F = K + C − P).
     const atm = c.rows.filter((r) => r.callPrice && r.putPrice).reduce<ChainRow | null>((b, r) => (!b || Math.abs(r.strike - c.spot) < Math.abs(b.strike - c.spot) ? r : b), null);

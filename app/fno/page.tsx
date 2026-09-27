@@ -106,7 +106,8 @@ export default async function FnoPage({ searchParams }: { searchParams: Promise<
         </div>
       </section>
 
-      {!chain.live && <p className="note small" style={{ marginTop: 12 }}>Indian option data comes from the exchange website and runs a few minutes behind. Connect a broker API for tick-by-tick data.</p>}
+      {chain.proxy && <p className="note warn" style={{ marginTop: 12 }}><b>Modelled chain.</b> {chain.proxy}</p>}
+      {!chain.live && !chain.proxy && <p className="note small" style={{ marginTop: 12 }}>Indian option data comes from the exchange website and runs a few minutes behind. Connect a broker API for tick-by-tick data.</p>}
 
       <div style={{ marginTop: 12 }}>
         <TodayCall d={decision} cur={cur} name={meta.name} expiryLabel={chain.expiries.find((e) => e.ts === chain.expiry)?.label} />
