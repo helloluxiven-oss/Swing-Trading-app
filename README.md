@@ -87,7 +87,9 @@ tests/              the rules against hand-worked numbers
 
 ## Running it
 
-Environment variables (Vercel → Settings → Environment Variables):
+No environment variables are required: `lib/config.ts` holds the public
+Supabase URL, publishable key and allowed email. Any of these environment
+variables, if set in Vercel, override the defaults:
 
 | Name | Value |
 |---|---|

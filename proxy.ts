@@ -4,16 +4,13 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { ALLOWED_EMAIL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./lib/config";
 
 const PUBLIC = ["/login"];
 
 export async function proxy(req: NextRequest) {
   let res = NextResponse.next({ request: req });
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) return new NextResponse("Supabase is not configured.", { status: 500 });
-
-  const supabase = createServerClient(url, key, {
+  const supabase = createServerClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     cookies: {
       getAll: () => req.cookies.getAll(),
       setAll: (list, headers) => {
@@ -27,7 +24,7 @@ export async function proxy(req: NextRequest) {
 
   const { data } = await supabase.auth.getClaims();
   const email = String(data?.claims?.email ?? "").toLowerCase();
-  const allowed = (process.env.ALLOWED_EMAIL ?? "").trim().toLowerCase();
+  const allowed = ALLOWED_EMAIL;
   const signedIn = !!data?.claims && !!allowed && email === allowed;
   const isPublic = PUBLIC.some((p) => req.nextUrl.pathname.startsWith(p));
 

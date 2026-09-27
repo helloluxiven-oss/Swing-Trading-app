@@ -1,12 +1,10 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { ALLOWED_EMAIL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "../config";
 
 export function env() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase is not configured: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY.");
-  return { url, key };
+  return { url: SUPABASE_URL, key: SUPABASE_PUBLISHABLE_KEY };
 }
 
 /** A Supabase client bound to the signed-in user's cookies. Row-level security does the rest. */
@@ -27,4 +25,4 @@ export async function db() {
 }
 
 /** The single email allowed into this app. Anyone else is signed straight back out. */
-export const allowedEmail = () => (process.env.ALLOWED_EMAIL ?? "").trim().toLowerCase();
+export const allowedEmail = () => ALLOWED_EMAIL;
