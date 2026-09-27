@@ -28,7 +28,7 @@ export default function Nav() {
       {LINKS.map(([href, label, icon]) => {
         const on = href === "/" ? path === "/" : path.startsWith(href) || (href === "/scan" && path.startsWith("/stock"));
         return (
-          <Link key={href} href={href} className={on ? "on" : undefined} aria-current={on ? "page" : undefined}>
+          <Link key={href} href={href} className={`${on ? "on" : ""} ${href === "/settings" ? "desk-only" : ""}`} aria-current={on ? "page" : undefined}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               {icon}
             </svg>

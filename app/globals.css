@@ -165,7 +165,7 @@ textarea { min-height: 70px; resize: vertical; }
   .top { padding-top: calc(10px + env(safe-area-inset-top)); background: #06060b; }
   .nav {
     position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0;
     background: rgba(10, 10, 17, 0.97); border-top: 1px solid var(--line);
     backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
     padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
@@ -322,3 +322,30 @@ textarea { min-height: 70px; resize: vertical; }
 .factors .ok { color: var(--up); }
 .factors .no { color: var(--ink-3); }
 .alert-pop { position: fixed; right: 16px; bottom: 90px; z-index: 50; max-width: 360px; padding: 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--up); box-shadow: 0 10px 40px -10px rgba(34, 197, 94, 0.5); display: grid; gap: 6px; }
+
+/* phone header + tab bar */
+.phone-only { display: none !important; }
+.icon-btn { display: inline-grid; place-items: center; padding: 0; width: 40px; }
+@media (max-width: 900px) {
+  .desk-only { display: none !important; }
+  .phone-only { display: inline-grid !important; }
+  .top { flex-wrap: nowrap; }
+  .top .sp { margin-left: auto; gap: 6px; flex-wrap: nowrap; }
+  .top .btn.small { min-height: 40px; padding: 6px 10px; }
+  .install { background: linear-gradient(180deg, #8b5cf6, #7c3aed); color: #fff; border-color: transparent; font-weight: 600; }
+  .nav a span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .alert-pop { left: 12px; right: 12px; bottom: calc(84px + env(safe-area-inset-bottom)); max-width: none; }
+  .chart-head { gap: 6px; }
+  .chart-head .seg { overflow-x: auto; max-width: 100%; }
+  .seg { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  .seg button, .seg a { white-space: nowrap; }
+  .hero-today { padding: 16px; }
+  .pools { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tbl { font-size: 13px; }
+  .focus-price { text-align: left; }
+  .card { padding: 14px; }
+}
+@media (max-width: 380px) {
+  .brand span { display: none; }
+  .nav a { font-size: 10px; }
+}
