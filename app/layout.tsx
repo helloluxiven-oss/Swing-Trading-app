@@ -3,14 +3,22 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import { currentUser } from "@/lib/data";
 import { signOut } from "./actions";
+import InstallApp from "@/components/InstallApp";
 
 export const metadata: Metadata = {
   title: "SIGMORA Swing Desk",
   description: "Private setup scanner and discipline gate for India and US swing trades.",
   robots: { index: false, follow: false },
+  appleWebApp: { capable: true, title: "Swing Desk", statusBarStyle: "black-translucent" },
+  formatDetection: { telephone: false },
 };
 
-export const viewport: Viewport = { themeColor: "#07070d", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = {
+  themeColor: "#06060b",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let signedIn = false;
@@ -38,12 +46,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <em>Swing Desk</em>
             </a>
             <Nav />
-            <form action={signOut} className="sp">
-              <button className="btn small" type="submit">Sign out</button>
-            </form>
+            <div className="sp row">
+              <InstallApp />
+              <form action={signOut}>
+                <button className="btn small" type="submit">Sign out</button>
+              </form>
+            </div>
           </header>
         )}
-        <main className="wrap">{children}</main>
+        <main className={`wrap ${signedIn ? "with-tabs" : ""}`}>{children}</main>
       </body>
     </html>
   );

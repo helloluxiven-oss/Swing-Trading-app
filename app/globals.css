@@ -39,7 +39,13 @@ button, input, select, textarea { font: inherit; color: inherit; }
   position: sticky; top: 0; z-index: 10;
   display: flex; align-items: center; gap: 20px;
   padding: 12px 24px; border-bottom: 1px solid var(--line-soft);
-  background: rgba(7, 7, 13, 0.9); backdrop-filter: blur(10px);
+  background: rgba(7, 7, 13, 0.97);
+}
+/* Blur only on wide screens. On phones the nav inside .top is a fixed bottom tab
+   bar, and backdrop-filter would make .top its containing block, pinning the bar
+   to the header instead of the screen. */
+@media (min-width: 901px) {
+  .top { background: rgba(7, 7, 13, 0.88); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
 }
 .brand { font-weight: 700; letter-spacing: 0.04em; display: flex; align-items: center; gap: 9px; white-space: nowrap; }
 .brand img { border-radius: 8px; display: block; }
@@ -50,7 +56,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; }
-.nav a { padding: 7px 12px; border-radius: 8px; color: var(--ink-2); }
+.nav a { padding: 7px 12px; border-radius: 8px; color: var(--ink-2); display: inline-flex; align-items: center; gap: 7px; }
+.nav svg { width: 17px; height: 17px; flex: none; }
 .nav a:hover { background: rgba(255, 255, 255, 0.04); color: var(--ink); }
 .nav a.on { background: var(--violet-bg); color: var(--ink); }
 .top .sp { margin-left: auto; }
@@ -147,8 +154,31 @@ textarea { min-height: 70px; resize: vertical; }
 .note.good { border-color: #1e4a2e; background: var(--up-bg); color: #86efac; }
 .chart { height: 380px; width: 100%; }
 
+/* install prompt for iPhone */
+.ios-hint { position: fixed; inset: 0; z-index: 50; background: rgba(0,0,0,.6); display: grid; place-items: end center; padding: 16px; padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.ios-hint .card { max-width: 420px; width: 100%; }
+.install { border-color: var(--violet-line); color: var(--accent); }
+
 @media (max-width: 900px) {
   .brand em { display: none; }
+  /* phones: the nav becomes a fixed bottom tab bar, like a native app */
+  .top { padding-top: calc(10px + env(safe-area-inset-top)); background: #06060b; }
+  .nav {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 0;
+    background: rgba(10, 10, 17, 0.97); border-top: 1px solid var(--line);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    padding: 6px 4px calc(6px + env(safe-area-inset-bottom));
+  }
+  .nav a { flex-direction: column; gap: 3px; padding: 6px 2px; font-size: 11px; border-radius: 10px; justify-content: center; min-height: 48px; }
+  .nav svg { width: 22px; height: 22px; }
+  .nav a.on { background: transparent; color: var(--accent); }
+  .wrap.with-tabs { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+  h1 { font-size: 24px; }
+  .btn { min-height: 44px; }
+  input, select, textarea { font-size: 16px; } /* stops iPhone zooming into fields */
+  .yn { grid-template-columns: 1fr; }
+  .chart { height: 300px; }
   .g2, .g3, .g4 { grid-template-columns: 1fr; }
   .wrap { padding: 16px; }
   .top { padding: 10px 16px; gap: 10px; }
