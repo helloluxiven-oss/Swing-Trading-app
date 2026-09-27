@@ -55,7 +55,7 @@ export default async function FocusCard({ stock, holdings, trades }: { stock: St
         </div>
       </div>
 
-      <Chart bars={bars} ema20={ema(closes, 20)} ema50={ema(closes, 50)} avgCost={avg} levels={openTrade ? { entry: openTrade.entry, stop: openTrade.stop, target: openTrade.target } : null} height={320} defaultRange="3M" currency={cur} />
+      <Chart bars={bars} ema20={ema(closes, 20)} ema50={ema(closes, 50)} avgCost={avg} levels={openTrade ? { entry: openTrade.entry, stop: openTrade.stop, target: openTrade.target } : null} height={340} defaultRange="3M" currency={cur} symbol={stock.symbol} />
 
       <div className="grid g4 focus-stats">
         <div>

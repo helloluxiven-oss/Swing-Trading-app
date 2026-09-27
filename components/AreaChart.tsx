@@ -11,6 +11,7 @@ export default function AreaChart({ t, c, height = 180, showAvg = true }: { t: n
     const up = c[c.length - 1] >= c[0];
     const col = up ? "#22c55e" : "#f43f5e";
     const chart = createChart(el.current, {
+      localization: { locale: "en-US" },
       autoSize: true,
       layout: { background: { type: ColorType.Solid, color: "transparent" }, textColor: "#8a8aa6", fontSize: 10, fontFamily: "Inter, system-ui, sans-serif" },
       grid: { vertLines: { visible: false }, horzLines: { color: "rgba(255,255,255,0.04)" } },

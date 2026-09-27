@@ -1,8 +1,9 @@
 import { goldCandles, goldChart, goldNews, TFS, usdEvents, type Tf } from "@/lib/gold";
-import { analyseLiquidity, dayLevels, nyDesk, type SweepEvent, headlineLean, prevDayClose, SESSIONS, sessionAt, tzOffset, type Stage } from "@/lib/liquidity";
+import { analyseLiquidity, dayLevels, nyDesk, type SweepEvent, headlineLean, prevDayClose, tzOffset, type Stage } from "@/lib/liquidity";
 import { getSettings } from "@/lib/data";
 import { ago, pct, tone } from "@/lib/format";
-import IntradayChart, { type Level, type Line, type Mark } from "@/components/IntradayChart";
+import IntradayChart, { type Mark } from "@/components/IntradayChart";
+import type { Drawings } from "@/components/chart/annotations";
 import AutoRefresh from "@/components/AutoRefresh";
 import SweepAlert from "@/components/SweepAlert";
 
@@ -77,37 +78,38 @@ export default async function GoldPage({ searchParams }: { searchParams: Promise
 
   // The chart can be any timeframe; the strategy always reads 5-minute candles.
   const ccs = chartData?.candles ?? cs;
-  const bars = ccs.map(({ t, o, h, l, c }) => ({ t, o, h, l, c }));
-  const colour = Object.fromEntries(SESSIONS.map((s) => [s.name, s.color])) as Record<string, string>;
-  const bands = ccs.map((c) => {
-    const s = sessionAt(c.t);
-    return s ? colour[s] : null;
-  });
+  const bars = ccs.map(({ t, o, h, l, c, v }) => ({ t, o, h, l, c, v }));
   const offsets = ccs.map((c) => tzOffset(c.t));
-  const lines: Line[] = [];
   const marks: Mark[] = [];
   const active = nyMode ? nyPlan : r?.plan && (r.stage === "ready" || r.stage === "triggered") ? r.plan : null;
-  // Every session high/low of the day: solid until swept, dashed (ending at the sweep) once taken.
   const SESSION_COLOUR: Record<string, string> = { Asia: "#60a5fa", London: "#22c55e", "New York": "#f472b6" };
-  const short = { Asia: "AS", London: "LO", "New York": "NY" } as const;
   const lvls = dayLevels(cs);
-  const lastT = cs[cs.length - 1].t;
-  const levels: Level[] = lvls.map((l) => ({
-    fromT: cs[l.fromI].t,
-    toT: l.sweptI !== null ? cs[l.sweptI].t : lastT,
-    price: l.price,
-    color: SESSION_COLOUR[l.session],
-    title: `${short[l.session]} ${l.kind === "high" ? "H" : "L"}`,
-    dashed: l.sweptI !== null,
-  }));
-  if (r?.pdh) lines.push({ price: r.pdh, color: "#fbbf24", title: "PDH", style: 2 });
-  if (r?.pdl) lines.push({ price: r.pdl, color: "#fbbf24", title: "PDL", style: 2 });
-  if (active) {
-    lines.push({ price: active.entry, color: "#b39dfb", title: "Entry", style: 0 });
-    lines.push({ price: active.stop, color: "#f43f5e", title: "Stop", style: 0 });
-    lines.push({ price: active.tp1, color: "#22c55e", title: "TP1", style: 0 });
-    lines.push({ price: active.tp2, color: "#22c55e", title: "TP2", style: 2 });
-  }
+  const lastI = cs.length - 1;
+
+  // Session boxes (high → low), today's session highs/lows as rays, PDH/PDL, and the live plan as a zone.
+  // Clean chart: session boxes (label says which side NY/later sessions swept), PDH/PDL lines, the live plan zone.
+  const sweptOf = (firstI: number, kind: "high" | "low") => lvls.find((l) => l.kind === kind && cs[l.fromI].t >= cs[firstI].t && l.sweptI !== null && r?.sessions.some((b) => b.firstI === firstI && l.fromI >= b.firstI && l.fromI <= b.lastI));
+  const drawings: Drawings = {
+    boxes: (r?.sessions ?? []).map((b) => {
+      const tags = [sweptOf(b.firstI, "high") ? "H✕" : "", sweptOf(b.firstI, "low") ? "L✕" : ""].filter(Boolean).join(" ");
+      return {
+        from: cs[b.firstI].t,
+        to: cs[b.lastI].t,
+        top: b.high,
+        bottom: b.low,
+        color: SESSION_COLOUR[b.name],
+        label: `${b.name}${tags ? ` · ${tags}` : ""} · ${f2(b.high - b.low)}`,
+        live: !b.complete,
+      };
+    }),
+    rays: [
+      ...(r?.pdh ? [{ from: cs[0].t, to: null, price: r.pdh, color: "#fbbf24", label: "PDH" }] : []),
+      ...(r?.pdl ? [{ from: cs[0].t, to: null, price: r.pdl, color: "#fbbf24", label: "PDL" }] : []),
+    ],
+    zones: active
+      ? [{ from: cs[(nyMode ? desk?.primary?.mssI : r?.mss?.i) ?? lastI].t, entry: active.entry, stop: active.stop, target: active.tp1, side: active.side }]
+      : [],
+  };
   if (desk?.events.length) {
     for (const e of desk.events) {
       const gradeCol = e.grade === "A" ? "#22c55e" : e.grade === "B" ? "#fbbf24" : "#8a8aa6";
@@ -180,8 +182,8 @@ export default async function GoldPage({ searchParams }: { searchParams: Promise
         )}
       </div>
 
-      <div className="card" style={{ marginTop: 16 }}>
-        <IntradayChart bars={bars} bands={bands} lines={lines} marks={marks} levels={levels} offsets={offsets} tf={tf} />
+      <div className="card chart-card" style={{ marginTop: 16 }}>
+        <IntradayChart bars={bars} drawings={drawings} marks={marks} offsets={offsets} tf={tf} symbol={data.live ? "XAUUSD" : "GOLD (GC=F)"} />
         {tf !== "5m" && <div className="small muted" style={{ marginTop: 6 }}>Viewing {tf.toUpperCase()}. Sweeps, grades and the plan are always read from 5-minute candles.</div>}
       </div>
 

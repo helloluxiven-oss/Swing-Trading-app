@@ -349,3 +349,38 @@ textarea { min-height: 70px; resize: vertical; }
   .brand span { display: none; }
   .nav a { font-size: 10px; }
 }
+
+/* ---- TradingView-style chart shell ---- */
+.chart-card { padding: 0; overflow: hidden; }
+.tv { background: #0b0b12; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+.tv-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 8px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); overflow-x: auto; }
+.tv-tfs { display: flex; gap: 2px; flex: none; }
+.tv-tfs a, .tv-tfs button { background: none; border: 0; color: #9598a1; font: 600 12px Inter, system-ui, sans-serif; padding: 6px 9px; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+.tv-tfs a:hover, .tv-tfs button:hover { background: rgba(255, 255, 255, 0.06); color: #d1d4dc; }
+.tv-tfs a.on, .tv-tfs button.on { color: #fff; background: rgba(179, 157, 251, 0.18); }
+.tv-stage { position: relative; }
+.tv-canvas { position: absolute; inset: 0; }
+.tv-legend { position: absolute; z-index: 3; top: 8px; left: 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; font: 12px Inter, system-ui, sans-serif; color: #9598a1; pointer-events: none; font-variant-numeric: tabular-nums; }
+.tv-legend b { color: #d1d4dc; }
+.tv-legend i { font-style: normal; }
+.tv-legend .up, .tv-legend i.up { color: #26a69a; }
+.tv-legend .down, .tv-legend i.down { color: #ef5350; }
+.tv-key { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 8px 10px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 11px; color: #9598a1; }
+.tv-key span { display: inline-flex; align-items: center; gap: 6px; }
+.tv-key i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.tv-full { position: fixed; inset: 0; z-index: 100; border-radius: 0; }
+.tv-full .tv-stage { flex: 1; height: auto; }
+.tv:fullscreen .tv-stage { flex: 1; }
+@media (max-width: 900px) {
+  .tv-legend { font-size: 11px; gap: 2px 8px; right: 60px; }
+  .tv-key .muted { display: none; }
+}
+.tv[data-theme="light"] { border: 1px solid #e0e3eb; }
+.tv[data-theme="light"] .tv-bar, .tv[data-theme="light"] .tv-key { border-color: #e0e3eb; }
+.tv[data-theme="light"] .tv-tfs a, .tv[data-theme="light"] .tv-tfs button, .tv[data-theme="light"] .tv-key, .tv[data-theme="light"] .tv-legend { color: #6a6d78; }
+.tv[data-theme="light"] .tv-tfs a.on, .tv[data-theme="light"] .tv-tfs button.on { color: #131722; background: #e8e3fd; }
+.tv[data-theme="light"] .tv-tfs a:hover, .tv[data-theme="light"] .tv-tfs button:hover { background: #f0f3fa; color: #131722; }
+.tv[data-theme="light"] .tv-legend b { color: #131722; }
+.tv[data-theme="light"] .tv-legend .up, .tv[data-theme="light"] .tv-legend i.up { color: #089981; }
+.tv[data-theme="light"] .tv-legend .down, .tv[data-theme="light"] .tv-legend i.down { color: #f23645; }
+.tv[data-theme="tv"] .tv-bar, .tv[data-theme="tv"] .tv-key { border-color: #2a2e39; }

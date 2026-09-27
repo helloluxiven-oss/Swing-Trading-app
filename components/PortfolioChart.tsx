@@ -33,7 +33,7 @@ export default function PortfolioChart({ points, height = 320 }: { points: Histo
       rightPriceScale: { borderVisible: false },
       timeScale: { borderVisible: false },
       crosshair: { vertLine: { color: "#b39dfb55", labelBackgroundColor: "#352f5e" }, horzLine: { color: "#b39dfb55", labelBackgroundColor: "#352f5e" } },
-      localization: { priceFormatter: inr },
+      localization: { locale: "en-US", priceFormatter: inr },
     });
     chartRef.current = chart;
     const t = (x: number) => x as UTCTimestamp;

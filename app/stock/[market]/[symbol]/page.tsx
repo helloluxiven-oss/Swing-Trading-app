@@ -105,9 +105,11 @@ export default async function StockPage({ params, searchParams }: { params: Prom
       </div>
 
       {tf !== "1d" && !intraday?.length && <p className="note warn small">No {tf} data from the source right now — showing daily.</p>}
-      <div className="card" style={{ padding: 8, marginBottom: 14 }}>
+      <div className="card chart-card" style={{ marginBottom: 14 }}>
         <Chart
           key={tf}
+          symbol={stock.symbol}
+          currency={market === "IN" ? "₹" : "$"}
           bars={chartCandles}
           ema20={ema(chartCloses, 20)}
           ema50={ema(chartCloses, 50)}
