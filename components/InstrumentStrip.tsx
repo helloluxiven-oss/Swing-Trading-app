@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Sparkline from "./Sparkline";
-import { DESKS, fmtPrice, hasStrategy, type DeskKind, type Instrument } from "@/lib/instruments";
+import { DESKS, fmtPrice, type DeskKind, type Instrument } from "@/lib/instruments";
 import type { Quote } from "@/lib/feeds";
 
 const ICON: Record<string, string> = { Metals: "◆", Forex: "⇄", Energy: "⛽", Crypto: "₿" };
@@ -15,7 +15,7 @@ export default function InstrumentStrip({ kind, list, quotes, active, tf }: { ki
     return (
       <Link key={i.id} href={`${DESKS[kind].path}?s=${i.id}${tf !== "5m" ? `&tf=${tf}` : ""}`} scroll={false} className={`ichip ${big ? "pinned" : ""} ${active === i.id ? "on" : ""}`} aria-current={active === i.id ? "true" : undefined}>
         <span className="ichip-top">
-          <b>{big && <span className="pin">★</span>}{i.short}{hasStrategy(i) && <span className="strat" title="Liquidity-sweep strategy">⚡</span>}</b>
+          <b>{big && <span className="pin">★</span>}{i.short}</b>
           <span className={`small ${q?.changePct == null ? "muted" : up ? "up" : "down"}`}>{q?.changePct == null ? "—" : `${up ? "+" : ""}${q.changePct.toFixed(2)}%`}</span>
         </span>
         <span className="ichip-px">{q ? fmtPrice(i, q.price) : "—"}</span>
@@ -29,7 +29,7 @@ export default function InstrumentStrip({ kind, list, quotes, active, tf }: { ki
     <section className="istrip" aria-label={`${DESKS[kind].title} instruments`}>
       <div className="row between" style={{ marginBottom: 8 }}>
         <h1 style={{ margin: 0 }}>{DESKS[kind].title}</h1>
-        <span className="small muted">{DESKS[kind].blurb}{kind === "fx" ? " · ⚡ = strategy on" : " · market view"}</span>
+        <span className="small muted">{DESKS[kind].blurb} · liquidity-sweep strategy on every chart</span>
       </div>
       <div className="istrip-row">
         {chip(pinned, true)}

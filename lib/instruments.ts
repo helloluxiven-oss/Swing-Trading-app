@@ -27,8 +27,8 @@ export type Instrument = {
   pinned?: boolean;
 };
 
-/** The liquidity-sweep strategy is run on gold and the forex pairs only; everything else is a market view. */
-export const hasStrategy = (i: Instrument) => i.id === "XAUUSD" || i.group === "Forex";
+/** The liquidity-sweep strategy runs on every instrument (a market view remains available by returning false here). */
+export const hasStrategy = (_i: Instrument) => true;
 
 export const INSTRUMENTS: Instrument[] = [
   // ---- Forex & commodities (XAU pinned first) ----
