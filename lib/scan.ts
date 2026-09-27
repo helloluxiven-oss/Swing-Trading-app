@@ -58,3 +58,14 @@ export async function analyseOne(stock: Stock): Promise<{
     index,
   };
 }
+
+/**
+ * Bars for DRAWING a chart: the completed candles plus today's forming candle,
+ * closed at the live price, so the chart always ends at the real price. The
+ * rules never see this — they run on completed candles only.
+ */
+export function chartBars(candles: Candle[], forming: Candle | null, quote: Quote | null): Candle[] {
+  if (!forming || !quote) return candles;
+  const p = quote.price;
+  return [...candles, { ...forming, c: p, h: Math.max(forming.h, p), l: Math.min(forming.l, p) }];
+}

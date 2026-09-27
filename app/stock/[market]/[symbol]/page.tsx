@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { analyseOne } from "@/lib/scan";
+import { analyseOne, chartBars } from "@/lib/scan";
 import { findStock } from "@/lib/universe";
 import { ema } from "@/lib/indicators";
 import { plan, type Market } from "@/lib/plan";
@@ -48,7 +48,8 @@ export default async function StockPage({ params }: { params: Promise<{ market: 
     );
   }
 
-  const closes = candles.map((c) => c.c);
+  const bars = chartBars(candles, live.forming, quote);
+  const closes = bars.map((c) => c.c);
   const capital = market === "IN" ? settings.capitalInr : settings.capitalUsd;
   const mk = (side: "long" | "short") =>
     plan({
@@ -86,7 +87,7 @@ export default async function StockPage({ params }: { params: Promise<{ market: 
 
       <div className="card" style={{ padding: 8, marginBottom: 14 }}>
         <Chart
-          bars={candles}
+          bars={bars}
           ema20={ema(closes, 20)}
           ema50={ema(closes, 50)}
           levels={best.status === "ready" || best.status === "confirmed" ? plans[best.side] : null}

@@ -1,6 +1,6 @@
 import { focus52 } from "@/lib/focus52";
 import Link from "next/link";
-import { analyseOne } from "@/lib/scan";
+import { analyseOne, chartBars } from "@/lib/scan";
 import { ema } from "@/lib/indicators";
 import { scoreRules, exitWatch, tradeable } from "@/lib/score";
 import { STATUS_LABEL } from "@/lib/setup";
@@ -27,7 +27,8 @@ export default async function FocusCard({ stock, holdings, trades }: { stock: St
   const openTrade = trades.find((t) => t.status === "open" && t.symbol === stock.symbol && t.market === m) ?? null;
   const watchSide = openTrade?.side ?? "long";
   const signals = qty || openTrade ? exitWatch(a, watchSide) : [];
-  const closes = candles.map((c) => c.c);
+  const bars = chartBars(candles, live.forming, q);
+  const closes = bars.map((c) => c.c);
   const score = scoreRules(a.best.rules);
   const cur = m === "IN" ? "₹" : "$";
   const pos = Math.round(a.rangePos * 100);
@@ -53,7 +54,7 @@ export default async function FocusCard({ stock, holdings, trades }: { stock: St
         </div>
       </div>
 
-      <Chart bars={candles} ema20={ema(closes, 20)} ema50={ema(closes, 50)} avgCost={avg} levels={openTrade ? { entry: openTrade.entry, stop: openTrade.stop, target: openTrade.target } : null} height={320} defaultRange="3M" currency={cur} />
+      <Chart bars={bars} ema20={ema(closes, 20)} ema50={ema(closes, 50)} avgCost={avg} levels={openTrade ? { entry: openTrade.entry, stop: openTrade.stop, target: openTrade.target } : null} height={320} defaultRange="3M" currency={cur} />
 
       <div className="grid g4 focus-stats">
         <div>
