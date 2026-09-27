@@ -8,6 +8,7 @@ import StarButton from "./StarButton";
 import { money, pct, tone } from "@/lib/format";
 import type { Market } from "@/lib/plan";
 import type { Status } from "@/lib/setup";
+import Logo from "./Logo";
 
 export type TopRow = {
   symbol: string;
@@ -109,9 +110,12 @@ export default function TopList({ data }: { data: MarketTop[] }) {
             <li key={r.symbol} className={`${r.tradeable ? "hot" : ""} ${isOpen ? "open" : ""}`}>
               <button className="toprow" onClick={() => setOpen(isOpen ? null : r.symbol)} aria-expanded={isOpen}>
                 <span className="rank">{i + 1}</span>
-                <span className="who">
-                  <b>{r.symbol}</b>
-                  <span className="small muted">{r.name}</span>
+                <span className="who-wrap">
+                  <Logo symbol={r.symbol} market={r.market} size={34} />
+                  <span className="who">
+                    <b>{r.symbol}</b>
+                    <span className="small muted">{r.name}</span>
+                  </span>
                 </span>
                 <span className="hide-xs"><Sparkline values={r.spark.slice(-60)} /></span>
                 <span className="px">

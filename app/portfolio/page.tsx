@@ -13,6 +13,7 @@ import AutoRefresh from "@/components/AutoRefresh";
 import PortfolioChart from "@/components/PortfolioChart";
 import Donut, { PALETTE } from "@/components/Donut";
 import Sparkline from "@/components/Sparkline";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -165,9 +166,12 @@ export default async function PortfolioPage() {
               return (
                 <div key={r.h.id} className="card holding" style={{ borderTop: `3px solid ${PALETTE[byStock.findIndex((b) => b.label === r.h.symbol) % PALETTE.length] ?? PALETTE[i]}` }}>
                   <div className="row between">
-                    <div>
+                    <div className="who-wrap">
+                      <Logo symbol={r.h.symbol} market={r.h.market} size={40} />
+                      <div>
                       <Link href={`/stock/${r.h.market}/${encodeURIComponent(r.h.symbol)}`}><b style={{ fontSize: 17 }}>{r.h.symbol}</b></Link>
                       <div className="small muted">{r.h.sector ?? r.h.market} · {qtyFmt(r.h.qty)} @ {money(r.h.avg_price, r.h.market)}{r.h.bought_on ? ` · since ${r.h.bought_on}` : ""}</div>
+                      </div>
                     </div>
                     <div style={{ textAlign: "right" }}>
                       <b>{money(r.price, r.h.market)}</b>

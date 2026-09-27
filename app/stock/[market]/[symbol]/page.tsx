@@ -11,6 +11,7 @@ import Chart from "@/components/Chart";
 import TradeGate from "@/components/TradeGate";
 
 import AutoRefresh from "@/components/AutoRefresh";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -66,7 +67,7 @@ export default async function StockPage({ params }: { params: Promise<{ market: 
       <div className="row between">
         <div>
           <Link href={`/scan?m=${market}`} className="small muted">← {market === "IN" ? "India" : "US"} scanner</Link>
-          <h1>{stock.symbol} <span className="muted" style={{ fontSize: 16, fontWeight: 400 }}>{stock.name}</span></h1>
+          <h1 className="who-wrap"><Logo symbol={stock.symbol} market={stock.market} size={44} />{stock.symbol} <span className="muted" style={{ fontSize: 16, fontWeight: 400 }}>{stock.name}</span></h1>
         </div>
         <div style={{ textAlign: "right" }}>
           <div style={{ fontSize: 26, fontWeight: 700 }}>{money(quote.price, market)}</div>

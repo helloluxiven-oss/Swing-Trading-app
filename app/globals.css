@@ -301,3 +301,7 @@ textarea { min-height: 70px; resize: vertical; }
 }
 .focus-stats .big-num { font-size: 20px; }
 .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+.logo { display: inline-grid; place-items: center; flex: none; background: #fff; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.logo img { width: 78%; height: 78%; object-fit: contain; display: block; }
+.logo-fallback { background: linear-gradient(135deg, #7c3aed, #22d3ee); color: #fff; font-weight: 800; letter-spacing: -0.02em; }
+.who-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }

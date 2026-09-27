@@ -6,6 +6,7 @@ import { money, pct, tone, ago } from "@/lib/format";
 import type { Market } from "@/lib/plan";
 
 import AutoRefresh from "@/components/AutoRefresh";
+import Logo from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -101,9 +102,9 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
               return (
                 <tr key={stock.symbol}>
                   <td>
-                    <Link href={`/stock/${market}/${encodeURIComponent(stock.symbol)}`}>
-                      <b>{stock.symbol}</b>
-                      <div className="small muted">{stock.name}</div>
+                    <Link href={`/stock/${market}/${encodeURIComponent(stock.symbol)}`} className="who-wrap">
+                      <Logo symbol={stock.symbol} market={market} size={30} />
+                      <span><b>{stock.symbol}</b><div className="small muted">{stock.name}</div></span>
                     </Link>
                   </td>
                   <td className="num">{quote ? money(quote.price, market) : "—"}</td>

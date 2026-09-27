@@ -10,6 +10,7 @@ import type { Holding, Trade } from "@/lib/data";
 import Chart from "./Chart";
 import StarButton from "./StarButton";
 import RuleDots from "./RuleDots";
+import Logo from "@/components/Logo";
 
 /** One favourite, in depth: live chart, where it stands on your rules, and your position in it. */
 export default async function FocusCard({ stock, holdings, trades }: { stock: Stock; holdings: Holding[]; trades: Trade[] }) {
@@ -38,7 +39,7 @@ export default async function FocusCard({ stock, holdings, trades }: { stock: St
     <section className="focus card">
       <div className="focus-head">
         <div className="row">
-          <span className="ticker-badge">{stock.symbol.slice(0, 4)}</span>
+          <Logo symbol={stock.symbol} market={stock.market} size={48} />
           <div>
             <div className="row" style={{ gap: 8 }}>
               <h2 style={{ margin: 0 }}>{stock.symbol}</h2>
