@@ -9,6 +9,7 @@ import { candles as feed } from "@/lib/feeds";
 import { findInstrument } from "@/lib/instruments";
 import { derivDiag, fiiDii, getChain } from "@/lib/derivs";
 import { todayCall } from "@/lib/fnocall";
+import { resolveStock, searchStocks } from "@/lib/stocks";
 import { analyseLiquidity } from "@/lib/liquidity";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 
@@ -50,6 +51,9 @@ export async function GET(req: Request) {
           const r = await todayCall(u);
           return [u, r.decision ? { action: r.decision.action, score: r.decision.score, confidence: r.decision.confidence, trade: r.decision.trade, factors: r.decision.factors.map((f) => `${f.name} ${f.score.toFixed(1)}: ${f.note}`) } : null];
         })))
+      : undefined,
+    search: new URL(req.url).searchParams.get("search")
+      ? { hits: await searchStocks(new URL(req.url).searchParams.get("search")!), resolveTCS: await resolveStock("TCS", "IN"), resolveZOMATO: await resolveStock("ETERNAL", "IN"), resolvePLTR: await resolveStock("PLTR", "US") }
       : undefined,
     fno: { nifty: ch(cNifty), sensex: ch(cSensex), btc: ch(cBtc), fiiDii: flows, diag: new URL(req.url).searchParams.has("diag") ? await derivDiag() : undefined },
     desks: { btc: fs(btc), eurusd: fs(eurusd), bnb: fs(bnb) },
