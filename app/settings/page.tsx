@@ -6,10 +6,12 @@ import SettingsForm from "@/components/SettingsForm";
 import NotifyPanel from "@/components/NotifyPanel";
 import PasswordForm from "@/components/PasswordForm";
 import ThemePicker from "@/components/ThemePicker";
+import InstallApp from "@/components/InstallApp";
 
 export const dynamic = "force-dynamic";
 
 const SECTIONS = [
+  ["app", "📲 Download app"],
   ["alerts", "🔔 Notifications"],
   ["rules", "⚖️ Trading rules"],
   ["look", "🎨 Chart look"],
@@ -33,7 +35,13 @@ export default async function SettingsPage() {
         </nav>
       </section>
 
-      <section id="alerts" className="card set-card">
+      <section id="app" className="card set-card">
+        <h2>📲 Download the app</h2>
+        <p className="small muted">Install SIGMORA on your phone or computer: it opens full screen from your home screen, and on iPhone it is required for notifications.</p>
+        <InstallApp variant="card" />
+      </section>
+
+      <section id="alerts" className="card set-card" style={{ marginTop: 16 }}>
         <h2>🔔 Live notifications</h2>
         <p className="small muted">Checked every minute on your favourites, on the server — they reach your phone even when the app is closed.</p>
         <NotifyPanel vapidPublic={vapid} prefs={{ ...DEFAULT_PREFS, ...(alerts.prefs ?? {}) }} devices={alerts.devices} log={alerts.log} />

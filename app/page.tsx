@@ -12,6 +12,7 @@ import StrategyRadar from "@/components/StrategyRadar";
 import type { Watch } from "@/lib/data";
 import AreaChart from "@/components/AreaChart";
 import AutoRefresh from "@/components/AutoRefresh";
+import InstallApp from "@/components/InstallApp";
 
 export const dynamic = "force-dynamic";
 
@@ -112,6 +113,7 @@ export default async function Today() {
 
   return (
     <>
+      <div className="phone-banner"><InstallApp variant="banner" /></div>
       <section className="hero-today">
         <div className="row between">
           <div>

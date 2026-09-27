@@ -28,7 +28,12 @@ const STEPS: Record<Platform, { title: string; steps: string[] }> = {
   desktop: { title: "Install on this computer", steps: ["In Chrome or Edge, click the install icon at the right of the address bar.", "Or open the ⋮ menu → Install SIGMORA Swing Desk."] },
 };
 
-export default function InstallApp() {
+/**
+ * variant "button": header button · "banner": dashboard banner on phones (dismissable for 3 days)
+ * · "card": Settings section that also says when the app is already installed.
+ */
+export default function InstallApp({ variant = "button" }: { variant?: "button" | "banner" | "card" }) {
+  const [hidden, setHidden] = useState(false);
   const [evt, setEvt] = useState<BIPEvent | null>(null);
   const [platform, setPlatform] = useState<Platform | null>(null);
   const [installed, setInstalled] = useState(true);
@@ -41,6 +46,10 @@ export default function InstallApp() {
       (navigator as Navigator & { standalone?: boolean }).standalone === true;
     setInstalled(standalone);
     setPlatform(detect());
+    try {
+      const until = Number(localStorage.getItem("install-banner-hidden") ?? 0);
+      if (variant === "banner" && until > Date.now()) setHidden(true);
+    } catch {}
     const onPrompt = (e: Event) => {
       e.preventDefault();
       setEvt(e as BIPEvent);
@@ -54,23 +63,41 @@ export default function InstallApp() {
     };
   }, []);
 
-  if (installed || !platform) return null;
+  if (!platform) return null;
+  if (installed) {
+    return variant === "card" ? <div className="note good">✅ <b>The app is installed on this device.</b> You&apos;re using it right now.</div> : null;
+  }
+  if (variant === "banner" && hidden) return null;
   const help = STEPS[platform];
+  const go = async () => {
+    if (evt) {
+      await evt.prompt();
+      await evt.userChoice;
+      setEvt(null);
+    } else setOpen(true);
+  };
 
   return (
     <>
-      <button
-        className="btn small install"
-        onClick={async () => {
-          if (evt) {
-            await evt.prompt();
-            await evt.userChoice;
-            setEvt(null);
-          } else setOpen(true);
-        }}
-      >
-        ⬇ <span>Install app</span>
-      </button>
+      {variant === "button" && (
+        <button className="btn small install" onClick={go}>
+          📲 <span>Download app</span>
+        </button>
+      )}
+      {variant === "banner" && (
+        <div className="install-banner" role="region" aria-label="Download the app">
+          <img src="/icon-192.png" alt="" width={40} height={40} />
+          <div><b>Get SIGMORA on your phone</b><span className="small muted">Full screen, one tap from your home screen, alerts even when closed.</span></div>
+          <button className="btn primary small" onClick={go}>📲 Download</button>
+          <button className="install-x" aria-label="Hide for 3 days" onClick={() => { setHidden(true); try { localStorage.setItem("install-banner-hidden", String(Date.now() + 3 * 86400000)); } catch {} }}>✕</button>
+        </div>
+      )}
+      {variant === "card" && (
+        <div className="row">
+          <button className="btn primary" onClick={go}>📲 Download the app to this device</button>
+          <span className="small muted">{evt ? "Your browser will install it directly." : "Shows the exact taps for your phone."}</span>
+        </div>
+      )}
       {open && (
         <div className="ios-hint" role="dialog" aria-label={help.title} onClick={() => setOpen(false)}>
           <div className="card stack" onClick={(e) => e.stopPropagation()}>
