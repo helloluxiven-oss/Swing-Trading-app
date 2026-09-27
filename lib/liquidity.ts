@@ -119,10 +119,12 @@ export function prevDay(cs: Candle[], tz = TZ): { high: number; low: number } | 
   return days.length >= 2 ? hl.get(days[days.length - 2])! : null;
 }
 
-const r2 = (x: number) => Math.round(x * 100) / 100;
+/** Round to the instrument's price precision (2 for gold/indices, 5 for most FX pairs, 3 for JPY pairs). */
+const roundTo = (p: number) => (x: number) => Math.round(x * 10 ** p) / 10 ** p;
 
-export function analyseLiquidity(all: Candle[], opts: { tz?: string; now?: number; swingLookback?: number } = {}): LiquidityResult | null {
+export function analyseLiquidity(all: Candle[], opts: { tz?: string; now?: number; swingLookback?: number; precision?: number } = {}): LiquidityResult | null {
   const tz = opts.tz ?? TZ;
+  const r2 = roundTo(opts.precision ?? 2);
   // Drop the forming bar: the last bar is closed only if 5 minutes have passed since it opened.
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   const cs = all.length && now - all[all.length - 1].t < 300 ? all.slice(0, -1) : all;
@@ -356,8 +358,9 @@ export type NyDesk = {
 
 const KZ_END = 10 * 60 + 30;
 
-export function nyDesk(all: Candle[], opts: { tz?: string; now?: number; redNews?: number[] } = {}): NyDesk | null {
+export function nyDesk(all: Candle[], opts: { tz?: string; now?: number; redNews?: number[]; precision?: number } = {}): NyDesk | null {
   const tz = opts.tz ?? TZ;
+  const r2 = roundTo(opts.precision ?? 2);
   const now = opts.now ?? Math.floor(Date.now() / 1000);
   const cs = all.length && now - all[all.length - 1].t < 300 ? all.slice(0, -1) : all;
   if (cs.length < 30) return null;

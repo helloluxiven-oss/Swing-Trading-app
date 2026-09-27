@@ -41,7 +41,7 @@ function snap(bars: Bar[], t: number): number {
   return ans;
 }
 
-const f2 = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 
 /**
  * Gold chart, TradingView-style: session boxes, labelled liquidity levels,
@@ -56,6 +56,8 @@ export default function IntradayChart({
   tf,
   symbol = "XAUUSD",
   height = 520,
+  precision = 2,
+  hrefBase = "/fx?s=XAUUSD&tf=",
 }: {
   bars: Bar[];
   drawings: Drawings;
@@ -64,6 +66,9 @@ export default function IntradayChart({
   tf: Tf;
   symbol?: string;
   height?: number;
+  precision?: number;
+  /** Timeframe links: hrefBase + tf. */
+  hrefBase?: string;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
@@ -77,6 +82,7 @@ export default function IntradayChart({
   }, [ranges]);
   const [hover, setHover] = useState<number | null>(null);
   const [full, setFull] = useState(false);
+  const fx = (x: number) => x.toLocaleString("en-US", { minimumFractionDigits: precision, maximumFractionDigits: precision });
   const idx = hover ?? bars.length - 1;
   const b = bars[idx];
   const prev = bars[idx - 1];
@@ -120,7 +126,7 @@ export default function IntradayChart({
 
     const candles = chart.addSeries(CandlestickSeries, {
       upColor: THEME.up, downColor: THEME.down, borderVisible: false, wickUpColor: THEME.up, wickDownColor: THEME.down,
-      priceFormat: { type: "price", precision: 2, minMove: 0.01 },
+      priceFormat: { type: "price", precision, minMove: 1 / 10 ** precision },
       priceLineColor: "#b39dfb",
     });
     candles.setData(bars.map((x, i) => ({ time: T(i), open: x.o, high: x.h, low: x.l, close: x.c })));
@@ -152,7 +158,7 @@ export default function IntradayChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, offsets, local, marks, tf, symbol, THEME]);
+  }, [bars, offsets, local, marks, tf, symbol, THEME, precision]);
 
   useEffect(() => {
     const c = chartRef.current;
@@ -186,7 +192,7 @@ export default function IntradayChart({
       <div className="tv-bar">
         <div className="tv-tfs" role="tablist" aria-label="Timeframe">
           {TFS.map((k) => (
-            <Link key={k} href={`/gold?tf=${k}`} scroll={false} className={tf === k ? "on" : ""} role="tab" aria-selected={tf === k}>{k.replace("m", "m").replace("h", "H")}</Link>
+            <Link key={k} href={`${hrefBase}${k}`} scroll={false} className={tf === k ? "on" : ""} role="tab" aria-selected={tf === k}>{k.replace("m", "m").replace("h", "H")}</Link>
           ))}
         </div>
         <div className="tv-tfs">
@@ -202,11 +208,11 @@ export default function IntradayChart({
           <div className="tv-legend">
             <b>{symbol}</b>
             <span className="muted">{tf.toUpperCase()}</span>
-            <span>O <i className={b.c >= b.o ? "up" : "down"}>{f2(b.o)}</i></span>
-            <span>H <i className={b.c >= b.o ? "up" : "down"}>{f2(b.h)}</i></span>
-            <span>L <i className={b.c >= b.o ? "up" : "down"}>{f2(b.l)}</i></span>
-            <span>C <i className={b.c >= b.o ? "up" : "down"}>{f2(b.c)}</i></span>
-            {prev && <span className={chg >= 0 ? "up" : "down"}>{chg >= 0 ? "+" : ""}{f2(chg)} ({((chg / prev.c) * 100).toFixed(2)}%)</span>}
+            <span>O <i className={b.c >= b.o ? "up" : "down"}>{fx(b.o)}</i></span>
+            <span>H <i className={b.c >= b.o ? "up" : "down"}>{fx(b.h)}</i></span>
+            <span>L <i className={b.c >= b.o ? "up" : "down"}>{fx(b.l)}</i></span>
+            <span>C <i className={b.c >= b.o ? "up" : "down"}>{fx(b.c)}</i></span>
+            {prev && <span className={chg >= 0 ? "up" : "down"}>{chg >= 0 ? "+" : ""}{fx(chg)} ({((chg / prev.c) * 100).toFixed(2)}%)</span>}
           </div>
         )}
         <div ref={el} className="tv-canvas" />

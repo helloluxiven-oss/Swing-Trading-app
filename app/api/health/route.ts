@@ -5,6 +5,8 @@ import { NextResponse } from "next/server";
 import { getSeries } from "@/lib/market";
 import { goldCandles, goldChart, goldNews, usdEvents } from "@/lib/gold";
 import { stockIntraday } from "@/lib/market";
+import { candles as feed } from "@/lib/feeds";
+import { findInstrument } from "@/lib/instruments";
 import { analyseLiquidity } from "@/lib/liquidity";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 
@@ -13,6 +15,8 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const t0 = Date.now();
   const [g1m, g4h, nvda1h, rel4h, rel5m] = await Promise.all([goldChart("1m"), goldChart("4h"), stockIntraday("NVDA", "US", "1h"), stockIntraday("RELIANCE", "IN", "4h"), stockIntraday("RELIANCE", "IN", "5m")]);
+  const [btc, eurusd, bnb] = await Promise.all([feed(findInstrument("crypto", "BTC")), feed(findInstrument("fx", "EURUSD")), feed(findInstrument("crypto", "BNB"))]);
+  const fs = (f: Awaited<ReturnType<typeof feed>>) => (f ? { source: f.source, live: f.live, price: f.price, candles5m: f.candles.length } : null);
   const [gold, news, events, nifty, spx, reliance, nvda] = await Promise.all([
     goldCandles(),
     goldNews(3),
@@ -37,6 +41,7 @@ export async function GET() {
     gold: gold
       ? { source: gold.source, live: gold.live, price: gold.price, candles5m: gold.candles.length, stage: analyseLiquidity(gold.candles)?.stage ?? null }
       : null,
+    desks: { btc: fs(btc), eurusd: fs(eurusd), bnb: fs(bnb) },
     timeframes: { gold1m: g1m?.candles.length ?? 0, gold4h: g4h?.candles.length ?? 0, nvda1h: nvda1h?.length ?? 0, reliance4h: rel4h?.length ?? 0, reliance5m: rel5m?.length ?? 0 },
     news: news.length,
     usdEvents: events.length,

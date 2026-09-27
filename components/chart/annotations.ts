@@ -20,7 +20,7 @@ import type {
 export type Box = { from: number; to: number; top: number; bottom: number; color: string; label: string; live?: boolean };
 export type Ray = { from: number; to: number | null; price: number; color: string; label: string; dashed?: boolean };
 export type Zone = { from: number; entry: number; stop: number; target: number; side: "long" | "short" };
-export type Drawings = { boxes: Box[]; rays: Ray[]; zones: Zone[] };
+export type Drawings = { boxes: Box[]; rays: Ray[]; zones: Zone[]; precision?: number };
 
 const FONT = "600 10px Inter, system-ui, sans-serif";
 /** Width reserved on the right for level labels; charts set a matching rightOffset. */
@@ -53,6 +53,7 @@ class Renderer implements IPrimitivePaneRenderer {
     const { chart, series } = this.src;
     if (!chart || !series) return;
     const d = this.src.data;
+    const pr = d.precision ?? 2;
     const ts = chart.timeScale();
     const x = (t: number) => ts.timeToCoordinate(t as UTCTimestamp);
     const y = (p: number) => series.priceToCoordinate(p);
@@ -98,9 +99,9 @@ class Renderer implements IPrimitivePaneRenderer {
         // Labels sit inside the zone when there is room, otherwise just left of it.
         const inside = w > (compact ? 110 : 150);
         const lx = inside ? x1 + 4 : x1 - 4;
-        pill(ctx, lx, ye, compact ? (z.side === "long" ? "LONG" : "SHORT") : `${z.side === "long" ? "LONG" : "SHORT"} ${z.entry.toFixed(2)}`, "#e2e2ee", "#0b0b12", !inside);
-        pill(ctx, lx, yt + (yt < ye ? 9 : -9), compact ? `TP ${rr.toFixed(1)}R` : `TP ${z.target.toFixed(2)} · ${rr.toFixed(1)}R`, "#26a69a", "#fff", !inside);
-        pill(ctx, lx, ys + (ys < ye ? 9 : -9), compact ? "SL" : `SL ${z.stop.toFixed(2)}`, "#ef5350", "#fff", !inside);
+        pill(ctx, lx, ye, compact ? (z.side === "long" ? "LONG" : "SHORT") : `${z.side === "long" ? "LONG" : "SHORT"} ${z.entry.toFixed(pr)}`, "#e2e2ee", "#0b0b12", !inside);
+        pill(ctx, lx, yt + (yt < ye ? 9 : -9), compact ? `TP ${rr.toFixed(1)}R` : `TP ${z.target.toFixed(pr)} · ${rr.toFixed(1)}R`, "#26a69a", "#fff", !inside);
+        pill(ctx, lx, ys + (ys < ye ? 9 : -9), compact ? "SL" : `SL ${z.stop.toFixed(pr)}`, "#ef5350", "#fff", !inside);
       }
     });
   }
@@ -114,6 +115,7 @@ class TopRenderer implements IPrimitivePaneRenderer {
     const ts = chart.timeScale();
     target.useMediaCoordinateSpace(({ context: ctx, mediaSize }) => {
       const right = mediaSize.width - 4;
+      const pr = this.src.data.precision ?? 2;
       const compact = mediaSize.width < 600;
       const placed: number[] = [];
       for (const r of this.src.data.rays) {
@@ -141,7 +143,7 @@ class TopRenderer implements IPrimitivePaneRenderer {
         let ly: number = yy;
         while (placed.some((p) => Math.abs(p - ly) < 16)) ly += 16;
         placed.push(ly);
-        pill(ctx, right, ly, compact ? r.label : `${r.label} ${r.price.toFixed(2)}`, r.color);
+        pill(ctx, right, ly, compact ? r.label : `${r.label} ${r.price.toFixed(pr)}`, r.color);
       }
     });
   }
@@ -183,7 +185,7 @@ export class Annotations implements ISeriesPrimitive<Time> {
   }
 }
 
-export type ThemeName = "tv" | "light" | "black";
+export type ThemeName = "premium" | "tv" | "light" | "black";
 export type ChartTheme = {
   name: ThemeName; label: string; bg: string; up: string; down: string; upVol: string; downVol: string;
   text: string; grid: string; border: string; cross: string; crossLabel: string; watermark: string;
@@ -191,21 +193,23 @@ export type ChartTheme = {
 
 /** Chart backgrounds. "tv" is TradingView's own dark; "light" matches its light chart. */
 export const THEMES: Record<ThemeName, ChartTheme> = {
+  // Exchange-grade palette (the pro-terminal look): near-black blue, mint / coral candles.
+  premium: { name: "premium", label: "Premium", bg: "#0b0e11", up: "#0ecb81", down: "#f6465d", upVol: "rgba(14,203,129,0.32)", downVol: "rgba(246,70,93,0.32)", text: "#848e9c", grid: "rgba(43,49,57,0.55)", border: "#2b3139", cross: "#5e6673", crossLabel: "#2b3139", watermark: "rgba(234,236,239,0.035)" },
   tv: { name: "tv", label: "Dark", bg: "#131722", up: "#26a69a", down: "#ef5350", upVol: "rgba(38,166,154,0.35)", downVol: "rgba(239,83,80,0.35)", text: "#b2b5be", grid: "rgba(42,46,57,0.6)", border: "#2a2e39", cross: "#758696", crossLabel: "#363a45", watermark: "rgba(255,255,255,0.04)" },
   light: { name: "light", label: "Light", bg: "#ffffff", up: "#089981", down: "#f23645", upVol: "rgba(8,153,129,0.3)", downVol: "rgba(242,54,69,0.3)", text: "#131722", grid: "rgba(42,46,57,0.06)", border: "#e0e3eb", cross: "#9598a1", crossLabel: "#131722", watermark: "rgba(19,23,34,0.05)" },
   black: { name: "black", label: "Black", bg: "#0b0b12", up: "#26a69a", down: "#ef5350", upVol: "rgba(38,166,154,0.35)", downVol: "rgba(239,83,80,0.35)", text: "#9598a1", grid: "rgba(255,255,255,0.045)", border: "rgba(255,255,255,0.08)", cross: "#758696", crossLabel: "#2a2e39", watermark: "rgba(255,255,255,0.035)" },
 };
-export const THEME = THEMES.tv;
-const ORDER: ThemeName[] = ["tv", "light", "black"];
+export const THEME = THEMES.premium;
+const ORDER: ThemeName[] = ["premium", "tv", "light", "black"];
 export const nextTheme = (t: ThemeName): ThemeName => ORDER[(ORDER.indexOf(t) + 1) % ORDER.length];
 
 const KEY = "chart-theme";
 export function loadTheme(): ThemeName {
   try {
     const v = localStorage.getItem(KEY) as ThemeName | null;
-    return v && v in THEMES ? v : "tv";
+    return v && v in THEMES ? v : "premium";
   } catch {
-    return "tv";
+    return "premium";
   }
 }
 export function saveTheme(t: ThemeName) {
@@ -216,7 +220,7 @@ export function saveTheme(t: ThemeName) {
 }
 /** React hook: current chart theme, shared by every chart on the page and remembered on this device. */
 export function useChartTheme(): [ChartTheme, () => void] {
-  const [name, setName] = useState<ThemeName>("tv");
+  const [name, setName] = useState<ThemeName>("premium");
   useEffect(() => {
     setName(loadTheme());
     const on = (e: Event) => setName((e as CustomEvent<ThemeName>).detail);
