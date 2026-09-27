@@ -15,7 +15,7 @@ const I = {
 
 const LINKS = [
   ["/", "Today", I.today],
-  ["/scan", "Scanner", I.scan],
+  ["/scan", "Stocks", I.scan],
   ["/fx", "FX", I.gold],
   ["/crypto", "Crypto", I.crypto],
   ["/journal", "Journal", I.journal],

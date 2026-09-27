@@ -8,6 +8,7 @@ import { focus52 } from "@/lib/focus52";
 import { money, pct, tone } from "@/lib/format";
 import TopList, { type MarketTop, type TopRow } from "@/components/TopList";
 import Favourites from "@/components/Favourites";
+import StrategyRadar from "@/components/StrategyRadar";
 import type { Watch } from "@/lib/data";
 import AreaChart from "@/components/AreaChart";
 import AutoRefresh from "@/components/AutoRefresh";
@@ -131,6 +132,10 @@ export default async function Today() {
 
       <Suspense fallback={<div className="card skeleton" style={{ height: 260, marginTop: 18 }} />}>
         <Favourites list={favs} suggested={!watch.length} />
+      </Suspense>
+
+      <Suspense fallback={<div className="grid g2" style={{ marginTop: 18 }}><div className="card skeleton" style={{ height: 360 }} /><div className="card skeleton" style={{ height: 360 }} /></div>}>
+        <StrategyRadar />
       </Suspense>
 
 

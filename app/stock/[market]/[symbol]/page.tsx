@@ -84,7 +84,7 @@ export default async function StockPage({ params, searchParams }: { params: Prom
     <>
       <div className="row between">
         <div>
-          <Link href={`/scan?m=${market}`} className="small muted">← {market === "IN" ? "India" : "US"} scanner</Link>
+          <Link href={`/scan?m=${market}`} className="small muted">← {market === "IN" ? "India" : "US"} stocks</Link>
           <h1 className="who-wrap"><Logo symbol={stock.symbol} market={stock.market} size={44} />{stock.symbol} <span className="muted" style={{ fontSize: 16, fontWeight: 400 }}>{stock.name}</span></h1>
         </div>
         <div style={{ textAlign: "right" }}>

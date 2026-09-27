@@ -47,7 +47,7 @@ export default async function JournalPage() {
       </div>
 
       <h2>Open ({open.length})</h2>
-      {!open.length && <p className="note">No open trades. Find a setup on the <Link href="/scan" className="up">scanner</Link>.</p>}
+      {!open.length && <p className="note">No open trades. Find a setup under <Link href="/scan" className="up">Stocks</Link>.</p>}
       <div className="stack">
         {open.map((t, i) => {
           const px = prices[i];

@@ -35,7 +35,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <div className="row between" style={{ marginBottom: 6 }}>
-        <div className="row"><h1>Scanner</h1><AutoRefresh seconds={60} /></div>
+        <div className="row"><h1>Stocks</h1><AutoRefresh seconds={60} /></div>
         <div className="row">
           <div className="seg">
             <Link className={market === "IN" ? "on" : ""} href={href("IN", filter)}>India · NIFTY 50</Link>

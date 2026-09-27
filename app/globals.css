@@ -525,3 +525,22 @@ details summary { cursor: pointer; }
   .mini-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
   .mini-card { flex: 0 0 82%; scroll-snap-align: start; }
 }
+
+/* ---- liquidity-sweep radar (dashboard top 5s) ---- */
+.radar h3 { font-size: 16px; }
+.radar-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; }
+.radar-row { display: grid; grid-template-columns: 24px 36px minmax(0, 1fr) auto auto; grid-template-areas: "rank logo who spark px" "rank logo pill pill pill"; gap: 4px 10px; align-items: center; padding: 10px; border-radius: 12px; border: 1px solid var(--line-soft); background: var(--panel); color: inherit; }
+.radar-row:hover { border-color: var(--violet-line); }
+.radar-row.hot { border-color: #1e4a2e; background: linear-gradient(90deg, rgba(34, 197, 94, 0.1), transparent 60%), var(--panel); box-shadow: 0 0 22px -10px rgba(34, 197, 94, 0.5); }
+.radar-row > .rank { grid-area: rank; }
+.radar-row > .logo { grid-area: logo; }
+.radar-row > .who { grid-area: who; }
+.radar-row > .who .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.radar-row > .hide-xs { grid-area: spark; }
+.radar-row > .px { grid-area: px; }
+.radar-row > .radar-pill { grid-area: pill; justify-self: start; }
+.hot .rank { background: var(--up-bg); color: var(--up); }
+@media (max-width: 900px) {
+  .radar-row { grid-template-columns: 22px 32px minmax(0, 1fr) auto; grid-template-areas: "rank logo who px" "rank logo pill pill"; }
+  .radar-row > .logo { width: 32px !important; height: 32px !important; }
+}

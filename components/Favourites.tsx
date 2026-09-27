@@ -52,7 +52,7 @@ const BADGE: Record<string, [string, string]> = {
   LTC: ["Ł", "linear-gradient(135deg,#cbd5e1,#64748b)"],
 };
 
-function Badge({ inst }: { inst: Instrument }) {
+export function Badge({ inst }: { inst: Instrument }) {
   const [text, bg] = BADGE[inst.id] ?? [inst.id.slice(0, 3), "linear-gradient(135deg,#7c3aed,#22d3ee)"];
   return <span className="logo logo-fallback" style={{ width: 36, height: 36, borderRadius: 10, background: bg, fontSize: text.length > 2 ? 10 : 15 }} aria-hidden="true">{text}</span>;
 }
