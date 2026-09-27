@@ -41,3 +41,10 @@ test("FX plans keep 5 decimals", () => {
   assert.ok(r.plan!.stop > r.plan!.entry);
   assert.equal(fmtPrice(findInstrument("fx", "EURUSD"), 1.085431), "1.08543");
 });
+
+test("strategy runs on XAU and forex pairs only", async () => {
+  const { hasStrategy, INSTRUMENTS } = await import("../lib/instruments");
+  const on = INSTRUMENTS.filter(hasStrategy).map((i) => i.id);
+  assert.deepEqual(on, ["XAUUSD", "EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD", "USDCHF", "NZDUSD"]);
+  assert.ok(!INSTRUMENTS.some((i) => i.kind === "crypto" && hasStrategy(i)));
+});

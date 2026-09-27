@@ -1,5 +1,5 @@
 import { calendar, candles, headlines, quotes, TFS, type Tf } from "@/lib/feeds";
-import { DESKS, deskInstruments, findInstrument, fmtPrice, sizeFor, type DeskKind } from "@/lib/instruments";
+import { DESKS, deskInstruments, findInstrument, fmtPrice, hasStrategy, sizeFor, type DeskKind } from "@/lib/instruments";
 import { analyseLiquidity, dayLevels, nyDesk, type SweepEvent, headlineLean, prevDayClose, tzOffset, type Stage } from "@/lib/liquidity";
 import { getSettings } from "@/lib/data";
 import { ago, pct, tone } from "@/lib/format";
@@ -85,6 +85,83 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
   const blackout = high.find((e) => now >= e.time - 1800 && now <= e.time + 900);
   const nextHigh = high.find((e) => e.time > now);
   const upcoming = events.filter((e) => e.time > now - 3600).slice(0, 8);
+
+  if (!hasStrategy(inst)) {
+    // Market view only: the liquidity-sweep strategy runs on XAU and the forex pairs.
+    const ccs0 = chartData?.candles ?? cs;
+    const pd = analyseLiquidity(cs, { now, precision: inst.precision });
+    const dayKey = (t: number) => new Date((t + tzOffset(t) + 7 * 3600) * 1000).toISOString().slice(0, 10);
+    const today = cs.filter((c) => dayKey(c.t) === dayKey(cs[cs.length - 1].t));
+    const dayHi = today.length ? Math.max(...today.map((c) => c.h)) : null;
+    const dayLo = today.length ? Math.min(...today.map((c) => c.l)) : null;
+    const view: Drawings = {
+      boxes: [],
+      rays: [
+        ...(pd?.pdh ? [{ from: cs[0].t, to: null, price: pd.pdh, color: "#fbbf24", label: "PDH" }] : []),
+        ...(pd?.pdl ? [{ from: cs[0].t, to: null, price: pd.pdl, color: "#fbbf24", label: "PDL" }] : []),
+      ],
+      zones: [],
+      precision: inst.precision,
+    };
+    return (
+      <>
+        {strip}
+        <section className={`hero-today ${kind === "crypto" ? "crypto" : "gold"}`}>
+          <div className="row between">
+            <div>
+              <div className="small muted">{DESKS[kind].title} · <b style={{ color: "var(--ink)" }}>{inst.name}</b> · {data.source} · updated {ago(data.time)}</div>
+              <div className="row" style={{ gap: 12, alignItems: "baseline" }}>
+                <div className="big-num">{fp(data.price)}</div>
+                <b className={tone(dayPct)}>{pct(dayPct)}</b>
+              </div>
+              <div className="row chips">
+                <span className="pill none">Market view · no strategy</span>
+                <span className="pill">Day {fp(dayLo)} – {fp(dayHi)}</span>
+                <span className="pill">PDH {fp(pd?.pdh)} · PDL {fp(pd?.pdl)}</span>
+                {nextHigh ? <span className="pill watch">Next red {nextHigh.country}: {nextHigh.title} · {nyTime(nextHigh.time)} NY</span> : null}
+              </div>
+            </div>
+            <AutoRefresh seconds={data.live ? 15 : 60} />
+          </div>
+        </section>
+        <p className="note small" style={{ marginTop: 12 }}>
+          The liquidity-sweep strategy runs on <b>XAU and the forex pairs</b> only. {inst.name} is shown as a live market view — chart, previous-day levels and news — with no sweep signals or trade plans.
+        </p>
+        <div className="card chart-card" style={{ marginTop: 12 }}>
+          <IntradayChart bars={ccs0.map(({ t, o, h, l, c, v }) => ({ t, o, h, l, c, v }))} drawings={view} marks={[]} offsets={ccs0.map((c) => tzOffset(c.t))} tf={tf} symbol={inst.id} precision={inst.precision} hrefBase={`${DESKS[kind].path}?s=${inst.id}&tf=`} sessions={false} />
+        </div>
+        <div className="grid g2" style={{ marginTop: 16 }}>
+          <div className="card">
+            <h3 className="card-title">{inst.name} news</h3>
+            {!news.length && <p className="small muted">Headlines unavailable right now.</p>}
+            <ul className="news">
+              {news.map((n) => (
+                <li key={n.link}>
+                  <a href={n.link} target="_blank" rel="noopener noreferrer">{n.title}</a>
+                  <div className="small muted">{n.source} · {ago(n.time)}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="card">
+            <h3 className="card-title">{inst.news.join(" · ")} calendar</h3>
+            {!upcoming.length && <p className="small muted">Calendar unavailable, or nothing left this week.</p>}
+            <ul className="news">
+              {upcoming.map((e) => (
+                <li key={`${e.title}${e.time}`} className={e.time < now ? "muted" : ""}>
+                  <div className="row between">
+                    <b><span className="muted small">{e.country}</span> {e.title}</b>
+                    <span className={`pill ${e.impact === "High" ? "bad" : "watch"}`}>{e.impact}</span>
+                  </div>
+                  <div className="small muted">{nyTime(e.time)} NY{e.forecast ? ` · forecast ${e.forecast}` : ""}{e.previous ? ` · prev ${e.previous}` : ""}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   // NY sweep monitor: every resting pool of the day, graded sweeps during New York.
   const desk = nyDesk(cs, { now, redNews: high.map((e) => e.time), precision: inst.precision });

@@ -416,3 +416,4 @@ textarea { min-height: 70px; resize: vertical; }
   .nav svg { width: 20px; height: 20px; }
   .ichip.pinned { min-width: 160px; }
 }
+.strat { margin-left: 4px; font-size: 11px; color: #fbbf24; }

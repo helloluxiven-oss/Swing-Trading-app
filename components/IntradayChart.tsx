@@ -58,6 +58,7 @@ export default function IntradayChart({
   height = 520,
   precision = 2,
   hrefBase = "/fx?s=XAUUSD&tf=",
+  sessions = true,
 }: {
   bars: Bar[];
   drawings: Drawings;
@@ -69,6 +70,8 @@ export default function IntradayChart({
   precision?: number;
   /** Timeframe links: hrefBase + tf. */
   hrefBase?: string;
+  /** Show the session legend (strategy instruments only). */
+  sessions?: boolean;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
@@ -217,13 +220,20 @@ export default function IntradayChart({
         )}
         <div ref={el} className="tv-canvas" />
       </div>
-      <div className="tv-key">
-        <span><i style={{ background: "#60a5fa" }} />Asia</span>
-        <span><i style={{ background: "#22c55e" }} />London</span>
-        <span><i style={{ background: "#f472b6" }} />New York</span>
-        <span><i style={{ background: "#fbbf24" }} />Prev day</span>
-        <span className="muted">boxes = session high→low · H✕ / L✕ = that side swept · New York time</span>
-      </div>
+      {sessions ? (
+        <div className="tv-key">
+          <span><i style={{ background: "#60a5fa" }} />Asia</span>
+          <span><i style={{ background: "#22c55e" }} />London</span>
+          <span><i style={{ background: "#f472b6" }} />New York</span>
+          <span><i style={{ background: "#fbbf24" }} />Prev day</span>
+          <span className="muted">boxes = session high→low · H✕ / L✕ = that side swept · New York time</span>
+        </div>
+      ) : (
+        <div className="tv-key">
+          <span><i style={{ background: "#fbbf24" }} />Previous day high / low</span>
+          <span className="muted">New York time</span>
+        </div>
+      )}
     </div>
   );
 }

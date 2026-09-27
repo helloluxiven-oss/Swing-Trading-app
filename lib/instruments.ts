@@ -27,6 +27,9 @@ export type Instrument = {
   pinned?: boolean;
 };
 
+/** The liquidity-sweep strategy is run on gold and the forex pairs only; everything else is a market view. */
+export const hasStrategy = (i: Instrument) => i.id === "XAUUSD" || i.group === "Forex";
+
 export const INSTRUMENTS: Instrument[] = [
   // ---- Forex & commodities (XAU pinned first) ----
   { id: "XAUUSD", name: "Gold", short: "XAU", kind: "fx", group: "Metals", yahoo: ["XAUUSD=X", "GC=F"], oanda: "XAU_USD", precision: 2, lot: 100, unit: "oz", quote: "USD", news: ["USD"], query: 'gold price OR XAUUSD OR "spot gold"', pinned: true },
@@ -57,7 +60,7 @@ export const INSTRUMENTS: Instrument[] = [
 
 export const DESKS: Record<DeskKind, { title: string; path: string; pinned: string; blurb: string }> = {
   fx: { title: "Forex & Commodities", path: "/fx", pinned: "XAUUSD", blurb: "Gold, silver, oil, gas and the major pairs" },
-  crypto: { title: "Crypto", path: "/crypto", pinned: "BTC", blurb: "Bitcoin and the large caps · trades 24/7" },
+  crypto: { title: "Crypto", path: "/crypto", pinned: "BTC", blurb: "Bitcoin and the large caps · 24/7" },
 };
 
 export const deskInstruments = (k: DeskKind) => INSTRUMENTS.filter((i) => i.kind === k);
