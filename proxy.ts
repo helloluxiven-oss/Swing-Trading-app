@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { ALLOWED_EMAIL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./lib/config";
 
-const PUBLIC = ["/login"];
+const PUBLIC = ["/login", "/api/health"];
 
 export async function proxy(req: NextRequest) {
   let res = NextResponse.next({ request: req });
@@ -35,7 +35,7 @@ export async function proxy(req: NextRequest) {
     to.search = "";
     return NextResponse.redirect(to);
   }
-  if (signedIn && isPublic) {
+  if (signedIn && isPublic && req.nextUrl.pathname.startsWith("/login")) {
     const to = req.nextUrl.clone();
     to.pathname = "/";
     to.search = "";
