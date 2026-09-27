@@ -21,6 +21,8 @@ orders with any broker.
 | **Stock** | Daily chart with 20/50 EMA and volume, every rule with the numbers behind it, the trade plan, the discipline gate |
 | **Journal** | Open trades with live R, close with exit price and "did you follow the plan?", win rate split by followed vs broken |
 | **Portfolio** | Holdings with live P/L, total in INR at today's USD/INR, trend check per holding |
+| **FX** | Forex & Commodities desk — XAU pinned first, then silver, majors, oil, gas. Intraday previous-session liquidity sweep: session boxes, PDH/PDL, NY sweep monitor with A/B/C grades and alerts, plan with position size |
+| **Crypto** | Same desk for BTC (pinned), ETH, SOL, XRP, BNB, DOGE, ADA, AVAX, LINK, LTC — real-time from Kraken |
 | **Rules** | Capital, risk per trade, reward:risk, stop method, office hours, losing-streak limit |
 
 ## The setup rules (v2)
