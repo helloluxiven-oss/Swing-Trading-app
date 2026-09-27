@@ -121,6 +121,7 @@ export function decide(x: DecisionInput): Decision {
   const ratio = x.ivAtm && x.rv ? x.ivAtm / x.rv : null;
   const cautions: string[] = [];
   if (ratio && ratio > 1.3) cautions.push(`Options are expensive (IV/RV ${ratio.toFixed(2)}) — prefer the spread over a naked buy.`);
+  if (days < 3) cautions.push("Under 3 days to expiry: time decay is steep. The stop is capped at a 40% premium loss; consider the next expiry for more room.");
   if (days < 1) cautions.push("Expiry day: premiums decay by the hour. Take profits quickly; never hold a loser into the close.");
   if (a.totalGex > 0 && Math.abs(score) >= 2) cautions.push("Dealers are long gamma — breakouts tend to stall at the walls. Book part at target 1.");
   const signs = f.filter((y) => Math.abs(y.score) >= 0.5).map((y) => Math.sign(y.score));
@@ -154,14 +155,18 @@ export function decide(x: DecisionInput): Decision {
       const u2 = oppWall != null && dir * (oppWall - spot) > em * 0.5 ? oppWall : spot + dir * em;
       const later = Math.max(T - 1 / 365, 1 / (365 * 24));
       const at = (S: number) => Math.max(0.05, bsPrice(type, S, r.strike, later, sig));
-      const next = sorted[type === "call" ? pickI + Math.max(1, Math.round((em * 0.8) / x.step)) : pickI - Math.max(1, Math.round((em * 0.8) / x.step))];
+      // Spread: sell the strike about 0.8 expected moves further out (by price, not by index — strike spacing varies).
+      const want = r.strike + dir * em * 0.8;
+      const beyond = sorted.filter((q) => (dir > 0 ? q.strike > r.strike : q.strike < r.strike));
+      const next = beyond.length ? beyond.reduce((b, q) => (Math.abs(q.strike - want) < Math.abs(b.strike - want) ? q : b), beyond[0]) : undefined;
       trade = {
         leg: `Buy ${r.strike} ${type === "call" ? "CE" : "PE"}`,
         strike: r.strike,
         type,
         entry: px,
         entryMax: px * 1.05,
-        stop: at(inv),
+        // Exit at the invalidation level or a 40% premium loss, whichever comes first.
+        stop: Math.max(at(inv), px * 0.6),
         target1: at(u1),
         target2: at(u2),
         invalidation: inv,

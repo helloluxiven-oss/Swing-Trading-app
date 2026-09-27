@@ -89,3 +89,15 @@ test("decision: aligned bullish inputs → BUY CALL with levels; mixed → NO TR
   assert.equal(mixed.action, "NO TRADE");
   assert.equal(mixed.trade, null);
 });
+
+test("decision: premium stop never risks more than 40%", () => {
+  const { bsPrice: bp } = require("../lib/options") as typeof import("../lib/options");
+  const T = 1.5 / 365, S = 100;
+  const rows = Array.from({ length: 21 }, (_, i) => 90 + i).map((k) => ({ strike: k, callOI: 1000, putOI: k < 97 ? 4000 : 800, callIV: 0.14, putIV: 0.15, callPrice: bp("call", S, k, T, 0.14), putPrice: bp("put", S, k, T, 0.15) }));
+  const a = ac(rows, S, T);
+  const down = Array.from({ length: 60 }, (_, i) => 120 - i * 0.33);
+  const d = decide({ spot: S, T, rows, a: { ...a, bias: "bearish" }, ivAtm: 0.15, rv: 0.14, closes: down, flows: { fiiNet: -4000, diiNet: 1000 }, news: { bull: 0, bear: 3 }, step: 1 });
+  assert.equal(d.action, "BUY PUT");
+  assert.ok(d.trade!.stop >= d.trade!.entry * 0.6 - 1e-9);
+  assert.ok(/sell \d+ PE/.test(d.trade!.spread!) && !d.trade!.spread!.includes(`sell ${d.trade!.strike - 1} PE`), "spread strike is further out than one step");
+});

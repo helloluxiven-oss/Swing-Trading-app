@@ -23,7 +23,7 @@ export default function TodayCall({ d, cur, name, expiryLabel, compact = false, 
         <div className="call-levels">
           <div><span className="label">Trade</span><b>{d.trade.leg}</b><span className="small muted">Δ {d.trade.delta.toFixed(2)}</span></div>
           <div><span className="label">Entry</span><b>{p(d.trade.entry)}</b><span className="small muted">max {p(d.trade.entryMax)}</span></div>
-          <div><span className="label">Stop</span><b className="down">{p(d.trade.stop)}</b><span className="small muted">if {u(d.trade.invalidation)} breaks</span></div>
+          <div><span className="label">Stop</span><b className="down">{p(d.trade.stop)}</b><span className="small muted">or {u(d.trade.invalidation)} breaks</span></div>
           <div><span className="label">Target 1</span><b className="up">{p(d.trade.target1)}</b><span className="small muted">at {u(d.trade.under1)}</span></div>
           <div><span className="label">Target 2</span><b className="up">{p(d.trade.target2)}</b><span className="small muted">at {u(d.trade.under2)}</span></div>
         </div>
