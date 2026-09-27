@@ -8,6 +8,7 @@ import {
   createSeriesMarkers,
   CrosshairMode,
   HistogramSeries,
+  LineSeries,
   type IChartApi,
   type SeriesMarker,
   type UTCTimestamp,
@@ -15,6 +16,8 @@ import {
 
 type Bar = { t: number; o: number; h: number; l: number; c: number };
 export type Line = { price: number; color: string; title: string; style?: 0 | 1 | 2 | 3 };
+/** A horizontal level drawn from the bar where it was made to where it was swept (or to now). */
+export type Level = { fromT: number; toT: number; price: number; color: string; title: string; dashed: boolean };
 export type Mark = { t: number; above: boolean; color: string; text: string };
 
 const RANGES = [
@@ -32,6 +35,7 @@ export default function IntradayChart({
   bands,
   lines,
   marks,
+  levels = [],
   offsets,
   height = 460,
 }: {
@@ -39,6 +43,7 @@ export default function IntradayChart({
   bands: (string | null)[]; // background colour per bar (session), null = none
   lines: Line[];
   marks: Mark[];
+  levels?: Level[];
   offsets: number[]; // seconds to add to each bar's time to show New York local time
   height?: number;
 }) {
@@ -71,6 +76,17 @@ export default function IntradayChart({
     candles.setData(bars.map((b, i) => ({ time: T(i), open: b.o, high: b.h, low: b.l, close: b.c })));
     for (const l of lines) candles.createPriceLine({ price: l.price, color: l.color, lineWidth: 1, lineStyle: l.style ?? 2, title: l.title, axisLabelVisible: true });
 
+    const pos = new Map(bars.map((b, i) => [b.t, i]));
+    for (const lv of levels) {
+      const a = pos.get(lv.fromT), b = pos.get(lv.toT);
+      if (a === undefined || b === undefined || b <= a) continue;
+      const s = chart.addSeries(LineSeries, {
+        color: lv.color, lineWidth: 1, lineStyle: lv.dashed ? 2 : 0, priceLineVisible: false, crosshairMarkerVisible: false,
+        lastValueVisible: !lv.dashed, title: lv.dashed ? "" : lv.title,
+      });
+      s.setData([{ time: T(a), value: lv.price }, { time: T(b), value: lv.price }]);
+    }
+
     const idx = new Map(bars.map((b, i) => [b.t, i]));
     const ms: SeriesMarker<UTCTimestamp>[] = marks
       .filter((m) => idx.has(m.t))
@@ -81,7 +97,7 @@ export default function IntradayChart({
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, bands, lines, marks, offsets]);
+  }, [bars, bands, lines, marks, levels, offsets]);
 
   useEffect(() => {
     const c = chartRef.current;
@@ -97,6 +113,7 @@ export default function IntradayChart({
           <span className="legend"><i style={{ background: "#60a5fa" }} />Asia 20–03</span>
           <span className="legend"><i style={{ background: "#22c55e" }} />London 03–07</span>
           <span className="legend"><i style={{ background: "#f472b6" }} />New York 08–12</span>
+          <span className="legend"><i style={{ background: "#e2e2ee" }} />Session H/L · dashed = swept</span>
           <span className="muted">· New York time · 5m</span>
         </div>
         <div className="seg small">

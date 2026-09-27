@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyseLiquidity, sessionAt, sessionBoxes, headlineLean } from "../lib/liquidity";
+import { analyseLiquidity, dayLevels, sessionAt, sessionBoxes, headlineLean } from "../lib/liquidity";
 import { portfolioHistory } from "../lib/portfolio";
 import type { Candle } from "../lib/indicators";
 
@@ -92,4 +92,15 @@ test("portfolio history: value, invested and index benchmark", () => {
   assert.equal(pts[1].value, 220);
   assert.equal(pts[1].invested, 200);
   assert.equal(pts[1].bench, 220); // 200 into the index at 50, now 55
+});
+
+test("day levels: every session's high and low, with sweeps marked", () => {
+  const cs = day([[2004, 2006, 2003, 2005], [2005, 2014, 2004, 2012], [2012, 2013, 2007, 2008]]);
+  const lv = dayLevels(cs);
+  const asiaHigh = lv.find((l) => l.session === "Asia" && l.kind === "high")!;
+  const asiaLow = lv.find((l) => l.session === "Asia" && l.kind === "low")!;
+  assert.equal(asiaHigh.price, 2010);
+  assert.ok(asiaHigh.sweptI !== null, "London ran the Asia high");
+  assert.equal(asiaLow.sweptI, null, "Asia low still resting");
+  assert.ok(lv.some((l) => l.session === "London" && l.live));
 });

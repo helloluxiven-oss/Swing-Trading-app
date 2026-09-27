@@ -1,8 +1,8 @@
 import { goldCandles, goldNews, usdEvents } from "@/lib/gold";
-import { analyseLiquidity, headlineLean, prevDayClose, SESSIONS, sessionAt, tzOffset, type Stage } from "@/lib/liquidity";
+import { analyseLiquidity, dayLevels, headlineLean, prevDayClose, SESSIONS, sessionAt, tzOffset, type Stage } from "@/lib/liquidity";
 import { getSettings } from "@/lib/data";
 import { ago, pct, tone } from "@/lib/format";
-import IntradayChart, { type Line, type Mark } from "@/components/IntradayChart";
+import IntradayChart, { type Level, type Line, type Mark } from "@/components/IntradayChart";
 import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
@@ -67,10 +67,19 @@ export default async function GoldPage() {
   const lines: Line[] = [];
   const marks: Mark[] = [];
   const active = r?.plan && (r.stage === "ready" || r.stage === "triggered") ? r.plan : null;
-  if (r?.prev) {
-    lines.push({ price: r.prev.high, color: "#e2e2ee", title: `${r.prev.name} H`, style: 1 });
-    lines.push({ price: r.prev.low, color: "#e2e2ee", title: `${r.prev.name} L`, style: 1 });
-  }
+  // Every session high/low of the day: solid until swept, dashed (ending at the sweep) once taken.
+  const SESSION_COLOUR: Record<string, string> = { Asia: "#60a5fa", London: "#22c55e", "New York": "#f472b6" };
+  const short = { Asia: "AS", London: "LO", "New York": "NY" } as const;
+  const lvls = dayLevels(cs);
+  const lastT = cs[cs.length - 1].t;
+  const levels: Level[] = lvls.map((l) => ({
+    fromT: cs[l.fromI].t,
+    toT: l.sweptI !== null ? cs[l.sweptI].t : lastT,
+    price: l.price,
+    color: SESSION_COLOUR[l.session],
+    title: `${short[l.session]} ${l.kind === "high" ? "H" : "L"}`,
+    dashed: l.sweptI !== null,
+  }));
   if (r?.pdh) lines.push({ price: r.pdh, color: "#fbbf24", title: "PDH", style: 2 });
   if (r?.pdl) lines.push({ price: r.pdl, color: "#fbbf24", title: "PDL", style: 2 });
   if (active) {
@@ -86,7 +95,6 @@ export default async function GoldPage() {
   // Size: risk % of the USD capital, 100 oz per standard lot.
   const riskUsd = (settings.capitalUsd * settings.riskPct) / 100;
   const lots = active ? riskUsd / (active.risk * 100) : null;
-  const recent = r ? r.sessions.slice(-6).reverse() : [];
 
   return (
     <>
@@ -142,7 +150,7 @@ export default async function GoldPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <IntradayChart bars={bars} bands={bands} lines={lines} marks={marks} offsets={offsets} />
+        <IntradayChart bars={bars} bands={bands} lines={lines} marks={marks} levels={levels} offsets={offsets} />
       </div>
 
       <div className="grid g2" style={{ marginTop: 16 }}>
@@ -167,25 +175,32 @@ export default async function GoldPage() {
           <div className="small muted" style={{ marginTop: 10 }}>PDH {f2(r?.pdh)} · PDL {f2(r?.pdl)} · 5m ATR {f2(r?.atr)}</div>
         </div>
         <div className="card">
-          <h3 className="card-title">Recent sessions</h3>
+          <h3 className="card-title">Session highs &amp; lows today</h3>
           <table className="tbl">
-            <thead><tr><th>Session</th><th className="num">High</th><th className="num">Low</th><th className="num">Range</th></tr></thead>
+            <thead><tr><th>Level</th><th className="num">Price</th><th className="num">From now</th><th>Liquidity</th></tr></thead>
             <tbody>
-              {recent.map((s) => (
-                <tr key={`${s.name}${s.firstI}`}>
-                  <td>
-                    <b>{s.name}</b>
-                    {!s.complete && <span className="pill watch" style={{ marginLeft: 6 }}>live</span>}
-                    {r?.prev?.firstI === s.firstI && <span className="pill" style={{ marginLeft: 6 }}>prev</span>}
-                    <div className="small muted">{nyTime(cs[s.firstI].t)}</div>
-                  </td>
-                  <td className="num">{f2(s.high)}</td>
-                  <td className="num">{f2(s.low)}</td>
-                  <td className="num">{f2(s.high - s.low)}</td>
-                </tr>
-              ))}
+              {[...lvls].sort((x, y) => y.price - x.price).map((l) => {
+                const isPrev = r?.prev && l.endI === r.prev.lastI;
+                return (
+                  <tr key={`${l.session}${l.kind}${l.fromI}`}>
+                    <td>
+                      <i className="dot" style={{ background: SESSION_COLOUR[l.session] }} />
+                      <b>{l.session} {l.kind}</b>
+                      {l.live && <span className="pill watch" style={{ marginLeft: 6 }}>forming</span>}
+                      {isPrev && <span className="pill" style={{ marginLeft: 6 }}>prev session</span>}
+                      <div className="small muted">{nyTime(cs[l.fromI].t)} NY</div>
+                    </td>
+                    <td className="num">{f2(l.price)}</td>
+                    <td className={`num ${tone(l.price - data.price)}`}>{l.price - data.price >= 0 ? "+" : ""}{f2(l.price - data.price)}</td>
+                    <td>{l.live ? <span className="pill none">still forming</span> : l.sweptI !== null ? <span className="pill bad">swept {nyTime(cs[l.sweptI].t).split(" ")[1]}</span> : <span className="pill good">resting</span>}</td>
+                  </tr>
+                );
+              })}
+              {r?.pdh != null && <tr><td><b>Prev day high</b></td><td className="num">{f2(r.pdh)}</td><td className={`num ${tone(r.pdh - data.price)}`}>{f2(r.pdh - data.price)}</td><td /></tr>}
+              {r?.pdl != null && <tr><td><b>Prev day low</b></td><td className="num">{f2(r.pdl)}</td><td className={`num ${tone(r.pdl - data.price)}`}>{f2(r.pdl - data.price)}</td><td /></tr>}
             </tbody>
           </table>
+          <p className="small muted">Resting = untouched liquidity (a target / sweep candidate). Swept = already taken.</p>
         </div>
       </div>
 

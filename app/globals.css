@@ -300,3 +300,4 @@ textarea { min-height: 70px; resize: vertical; }
   .chart-head .legend { display: none; }
 }
 .focus-stats .big-num { font-size: 20px; }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }

@@ -262,3 +262,40 @@ export function prevDayClose(cs: Candle[], tz = TZ): number | null {
   for (let i = cs.length - 1; i >= 0; i--) if (key(cs[i].t) !== today) return cs[i].c;
   return null;
 }
+
+export type SessionLevel = {
+  session: SessionName;
+  kind: "high" | "low";
+  price: number;
+  fromI: number; // bar where the level was made — the line starts here
+  endI: number; // last bar of that session
+  sweptI: number | null; // first later bar that traded through it (liquidity taken)
+  live: boolean; // session still running, level can still move
+};
+
+/**
+ * High and low of every session in the current gold day (Asia → London → New
+ * York, rolling at 17:00 New York) plus yesterday's New York session, which is
+ * the liquidity Asia trades against. Each level says whether it has been swept.
+ */
+export function dayLevels(cs: Candle[], tz = TZ): SessionLevel[] {
+  if (!cs.length) return [];
+  const boxes = sessionBoxes(cs, tz);
+  const key = (t: number) => nyParts(t + 7 * 3600, tz).date;
+  const today = key(cs[cs.length - 1].t);
+  const todays = boxes.filter((b) => key(cs[b.firstI].t) === today);
+  const before = boxes.filter((b) => key(cs[b.firstI].t) !== today && b.name === "New York").at(-1);
+  const pick = before ? [before, ...todays] : todays;
+  const out: SessionLevel[] = [];
+  for (const b of pick) {
+    for (const kind of ["high", "low"] as const) {
+      const price = kind === "high" ? b.high : b.low;
+      let sweptI: number | null = null;
+      for (let i = b.lastI + 1; i < cs.length; i++) {
+        if (kind === "high" ? cs[i].h > price : cs[i].l < price) { sweptI = i; break; }
+      }
+      out.push({ session: b.name, kind, price, fromI: kind === "high" ? b.highI : b.lowI, endI: b.lastI, sweptI, live: !b.complete });
+    }
+  }
+  return out;
+}
