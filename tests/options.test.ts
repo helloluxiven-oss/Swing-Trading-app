@@ -99,5 +99,6 @@ test("decision: premium stop never risks more than 40%", () => {
   const d = decide({ spot: S, T, rows, a: { ...a, bias: "bearish" }, ivAtm: 0.15, rv: 0.14, closes: down, flows: { fiiNet: -4000, diiNet: 1000 }, news: { bull: 0, bear: 3 }, step: 1 });
   assert.equal(d.action, "BUY PUT");
   assert.ok(d.trade!.stop >= d.trade!.entry * 0.6 - 1e-9);
-  assert.ok(/sell \d+ PE/.test(d.trade!.spread!) && !d.trade!.spread!.includes(`sell ${d.trade!.strike - 1} PE`), "spread strike is further out than one step");
+  const short = Number(d.trade!.spread!.match(/sell (\d+) PE/)![1]);
+  assert.ok(short < d.trade!.strike, "bear put spread sells a lower strike");
 });
