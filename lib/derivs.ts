@@ -207,7 +207,7 @@ async function niftyChain(pick?: number): Promise<Chain | null> {
       return { name: `Future ${exp ? expLabel(exp) : ""}`, expiry: exp, price: s.metadata!.lastPrice!, basisPct: basis, annualisedPct: yrs && yrs > 0.005 ? basis / yrs : null, oi: s.marketDeptOrderBook?.tradeInfo?.openInterest ?? null };
     })
     .sort((a, b) => (a.expiry ?? 0) - (b.expiry ?? 0));
-  const vix = await getIntraday("^INDIAVIX", "1d", "5d", 300);
+  const vix = await getIntraday("^INDIAVIX", "1d", "3mo", 300);
   const vc = vix?.candles ?? [];
   return {
     underlying: "NIFTY",
@@ -265,7 +265,7 @@ async function sensexChain(pick?: number): Promise<Chain | null> {
   const spotRow = await getIntraday("^BSESN", "5m", "1d", 60);
   const spot = spotRow?.price ?? num(pickKey(tbl[0], "UlaValue", "Underlying_Value"));
   const expiries = dates.map(toTs).filter((x): x is number => !!x).slice(0, 8);
-  const vix = await getIntraday("^INDIAVIX", "1d", "5d", 300);
+  const vix = await getIntraday("^INDIAVIX", "1d", "3mo", 300);
   return {
     underlying: "SENSEX",
     spot,
@@ -281,9 +281,34 @@ async function sensexChain(pick?: number): Promise<Chain | null> {
 }
 
 export async function getChain(u: Underlying, expiry?: number): Promise<Chain | null> {
-  if (u === "BTC" || u === "ETH") return cryptoChain(u, expiry);
-  if (u === "NIFTY") return niftyChain(expiry);
-  return sensexChain(expiry);
+  const c = u === "BTC" || u === "ETH" ? await cryptoChain(u, expiry) : u === "NIFTY" ? await niftyChain(expiry) : await sensexChain(expiry);
+  if (c && !c.futures.length) {
+    // No futures quote: use the market-implied forward from put-call parity at the ATM strike (F = K + C − P).
+    const atm = c.rows.filter((r) => r.callPrice && r.putPrice).reduce<ChainRow | null>((b, r) => (!b || Math.abs(r.strike - c.spot) < Math.abs(b.strike - c.spot) ? r : b), null);
+    if (atm && c.spot) {
+      const F = atm.strike + atm.callPrice! - atm.putPrice!;
+      const now = Date.now() / 1000, yrs = (c.expiry - now) / (365 * 86400);
+      const basis = ((F - c.spot) / c.spot) * 100;
+      c.futures.push({ name: `Synthetic forward ${expLabel(c.expiry)} (put-call parity)`, expiry: c.expiry, price: F, basisPct: basis, annualisedPct: yrs > 0.005 ? basis / yrs : null, oi: null });
+    }
+  }
+  return c;
+}
+
+/** Diagnostics for the health check: what BSE / NSE futures answer from this server. */
+export async function derivDiag() {
+  const probe = async (url: string, headers: Record<string, string>) => {
+    try {
+      const r = await fetch(url, { headers: { "User-Agent": UA, ...headers }, cache: "no-store" });
+      return { status: r.status, head: (await r.text()).slice(0, 160) };
+    } catch (e) {
+      return { status: 0, head: String(e).slice(0, 160) };
+    }
+  };
+  return {
+    bseExpiry: await probe("https://api.bseindia.com/BseIndiaAPI/api/ddlExpiry_IV/w?ProductType=IO&scrip_cd=1", { Referer: "https://www.bseindia.com/", Origin: "https://www.bseindia.com", Accept: "application/json" }),
+    nseFut: await probe("https://www.nseindia.com/api/quote-derivative?symbol=NIFTY", { Referer: "https://www.nseindia.com/get-quotes/derivatives?symbol=NIFTY", Accept: "application/json", Cookie: (await nseCookies()) ?? "" }),
+  };
 }
 
 // ---- FII / DII ---------------------------------------------------------------------------
