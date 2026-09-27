@@ -3,7 +3,7 @@
 
 import { NextResponse } from "next/server";
 import { getSeries } from "@/lib/market";
-import { SUPABASE_URL } from "@/lib/config";
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET() {
   ]);
   let db = "unknown";
   try {
-    const r = await fetch(`${SUPABASE_URL}/auth/v1/health`, { cache: "no-store" });
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/health`, { cache: "no-store", headers: { apikey: SUPABASE_PUBLISHABLE_KEY } });
     db = r.ok ? "ok" : `http ${r.status}`;
   } catch {
     db = "unreachable";
