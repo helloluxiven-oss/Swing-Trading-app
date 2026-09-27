@@ -350,30 +350,34 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
         </div>
         <div className="card">
           <h3 className="card-title">Session highs &amp; lows today</h3>
-          <table className="tbl">
-            <thead><tr><th>Level</th><th className="num">Price</th><th className="num">From now</th><th>Liquidity</th></tr></thead>
-            <tbody>
-              {[...lvls].sort((x, y) => y.price - x.price).map((l) => {
-                const isPrev = r?.prev && l.endI === r.prev.lastI;
-                return (
-                  <tr key={`${l.session}${l.kind}${l.fromI}`}>
-                    <td>
-                      <i className="dot" style={{ background: SESSION_COLOUR[l.session] }} />
-                      <b>{l.session} {l.kind}</b>
-                      {l.live && <span className="pill watch" style={{ marginLeft: 6 }}>forming</span>}
-                      {isPrev && <span className="pill" style={{ marginLeft: 6 }}>prev session</span>}
-                      <div className="small muted">{nyTime(cs[l.fromI].t)} NY</div>
-                    </td>
-                    <td className="num">{fp(l.price)}</td>
-                    <td className={`num ${tone(l.price - data.price)}`}>{l.price - data.price >= 0 ? "+" : ""}{fp(l.price - data.price)}</td>
-                    <td>{l.live ? <span className="pill none">still forming</span> : l.sweptI !== null ? <span className="pill bad">swept {nyTime(cs[l.sweptI].t).split(" ")[1]}</span> : <span className="pill good">resting</span>}</td>
-                  </tr>
-                );
-              })}
-              {r?.pdh != null && <tr><td><b>Prev day high</b></td><td className="num">{fp(r.pdh)}</td><td className={`num ${tone(r.pdh - data.price)}`}>{fp(r.pdh - data.price)}</td><td /></tr>}
-              {r?.pdl != null && <tr><td><b>Prev day low</b></td><td className="num">{fp(r.pdl)}</td><td className={`num ${tone(r.pdl - data.price)}`}>{fp(r.pdl - data.price)}</td><td /></tr>}
-            </tbody>
-          </table>
+          <ul className="lvl-list">
+            {[...lvls].sort((x, y) => y.price - x.price).map((l) => {
+              const isPrev = r?.prev && l.endI === r.prev.lastI;
+              const d = l.price - data.price;
+              return (
+                <li key={`${l.session}${l.kind}${l.fromI}`}>
+                  <div className="lvl-name">
+                    <i className="dot" style={{ background: SESSION_COLOUR[l.session] }} />
+                    <b>{l.session} {l.kind}</b>
+                    <span className="small muted">{nyTime(cs[l.fromI].t)} NY{isPrev ? " · prev session" : ""}</span>
+                  </div>
+                  <div className="lvl-px">
+                    <b>{fp(l.price)}</b>
+                    <span className={`small ${tone(d)}`}>{d >= 0 ? "+" : ""}{fp(d)}</span>
+                  </div>
+                  <div className="lvl-state">
+                    {l.live ? <span className="pill watch">forming</span> : l.sweptI !== null ? <span className="pill bad">swept {nyTime(cs[l.sweptI].t).split(" ")[1]}</span> : <span className="pill good">resting</span>}
+                  </div>
+                </li>
+              );
+            })}
+            {r?.pdh != null && (
+              <li><div className="lvl-name"><i className="dot" style={{ background: "#fbbf24" }} /><b>Prev day high</b></div><div className="lvl-px"><b>{fp(r.pdh)}</b><span className={`small ${tone(r.pdh - data.price)}`}>{fp(r.pdh - data.price)}</span></div><div className="lvl-state" /></li>
+            )}
+            {r?.pdl != null && (
+              <li><div className="lvl-name"><i className="dot" style={{ background: "#fbbf24" }} /><b>Prev day low</b></div><div className="lvl-px"><b>{fp(r.pdl)}</b><span className={`small ${tone(r.pdl - data.price)}`}>{fp(r.pdl - data.price)}</span></div><div className="lvl-state" /></li>
+            )}
+          </ul>
           <p className="small muted">Resting = untouched liquidity (a target / sweep candidate). Swept = already taken.</p>
         </div>
       </div>

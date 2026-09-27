@@ -616,3 +616,19 @@ details summary { cursor: pointer; }
 .grid.g3 .call-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid.g3 .call-levels > div:first-child { grid-column: 1 / -1; }
 @media (max-width: 900px) { .call-levels { grid-template-columns: repeat(2, minmax(0, 1fr)); } .call-levels > div:first-child { grid-column: 1 / -1; } }
+
+/* ---- session highs & lows list (FX / crypto desks) ---- */
+.lvl-list { list-style: none; margin: 0; padding: 0; }
+.lvl-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto 118px; gap: 4px 12px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.lvl-name { display: grid; grid-template-columns: 14px minmax(0, 1fr); column-gap: 2px; align-items: center; min-width: 0; }
+.lvl-name .dot { margin: 0; }
+.lvl-name .small { grid-column: 2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lvl-px { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+.lvl-state { justify-self: end; }
+@media (max-width: 520px) {
+  .lvl-list li { grid-template-columns: minmax(0, 1fr) auto; }
+  .lvl-state { grid-column: 1 / -1; justify-self: start; padding-left: 16px; }
+  .lvl-state:empty { display: none; }
+}
+/* Long pills (news events, ranges) wrap instead of pushing past the screen edge. */
+.chips .pill, .hero-today .pill, .lvl-state .pill { max-width: 100%; white-space: normal; overflow-wrap: anywhere; line-height: 1.3; }
