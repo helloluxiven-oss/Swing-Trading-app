@@ -49,7 +49,9 @@ export default async function FnoPage({ searchParams }: { searchParams: Promise<
         <section className="hero-today"><h1 style={{ margin: 0 }}>Options &amp; Futures</h1>{tabs}</section>
         <div className="note warn" style={{ marginTop: 12 }}>
           {india
-            ? `${u} option chain is unavailable right now. NSE/BSE block many cloud servers, and their data is also empty outside market hours on some days. For dependable real-time Indian options, connect a broker API (Upstox or Dhan — free with an account) and it will be used here.`
+            ? u === "SENSEX"
+              ? "SENSEX options: BSE refuses requests from cloud servers (it answers “Access Denied”), so this app cannot read the BSE option chain directly. India VIX, FII/DII and news are below. Connect a broker API (Upstox or Dhan — free with an account) and the full SENSEX chain, greeks and strategies switch on here."
+              : `${u} option chain is unavailable right now — NSE sometimes refuses cloud servers or returns empty data outside market hours. Try again shortly; a broker API (Upstox or Dhan) makes it dependable.`
             : "Deribit did not answer just now — try again in a moment."}
         </div>
         {flows && <FlowsCard flows={flows} />}
