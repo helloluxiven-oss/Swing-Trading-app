@@ -234,3 +234,80 @@ export async function toggleWatch(symbol: string, market: FavMarket): Promise<bo
   revalidatePath("/crypto");
   return !data;
 }
+
+// ---- notifications -----------------------------------------------------------
+
+/** Save this device's push subscription (from the browser's PushManager). */
+export async function savePushSubscription(sub: { endpoint: string; keys: { p256dh: string; auth: string } }, device: string): Promise<FormState> {
+  if (!sub?.endpoint?.startsWith("https://") || !sub.keys?.p256dh || !sub.keys?.auth) return { ok: false, message: "That device subscription looks invalid." };
+  const supabase = await db();
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return { ok: false, message: "Signed out." };
+  const { error } = await supabase.from("push_subscriptions").upsert({ endpoint: sub.endpoint, user_id: u.user.id, p256dh: sub.keys.p256dh, auth: sub.keys.auth, device: device.slice(0, 80) });
+  if (error) return { ok: false, message: error.message };
+  // Turning a device on also switches alerts on (with the defaults if never set).
+  await supabase.from("alert_prefs").upsert({ user_id: u.user.id, enabled: true }, { onConflict: "user_id" });
+  revalidatePath("/settings");
+  return { ok: true, message: "This device will get alerts." };
+}
+
+export async function removePushSubscription(endpoint: string) {
+  const supabase = await db();
+  await supabase.from("push_subscriptions").delete().eq("endpoint", endpoint);
+  revalidatePath("/settings");
+}
+
+export async function saveAlertPrefs(_: FormState, form: FormData): Promise<FormState> {
+  const supabase = await db();
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user) return { ok: false, message: "Signed out." };
+  const hm = (k: string, d: string) => (/^\d{2}:\d{2}$/.test(String(form.get(k))) ? String(form.get(k)) : d);
+  const grade = String(form.get("min_grade"));
+  const { error } = await supabase.from("alert_prefs").upsert({
+    user_id: u.user.id,
+    enabled: form.get("enabled") === "on",
+    sweeps: form.get("sweeps") === "on",
+    setups: form.get("setups") === "on",
+    stocks: form.get("stocks") === "on",
+    weekend_crypto: form.get("weekend_crypto") === "on",
+    min_grade: ["A", "B", "C"].includes(grade) ? grade : "B",
+    quiet_start: hm("quiet_start", "23:00"),
+    quiet_end: hm("quiet_end", "07:00"),
+    updated_at: new Date().toISOString(),
+  });
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/settings");
+  return { ok: true, message: "Alert settings saved." };
+}
+
+export async function sendTestAlert(): Promise<FormState> {
+  const { sendTest } = await import("@/lib/alerts");
+  const r = await sendTest(await db());
+  return r.sent ? { ok: true, message: `Sent to ${r.sent} of ${r.devices} device${r.devices > 1 ? "s" : ""}. Check your notifications.` } : { ok: false, message: r.error ?? "Nothing was delivered." };
+}
+
+// ---- account -------------------------------------------------------------------
+
+export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
+  const current = String(form.get("current") ?? "");
+  const next = String(form.get("next") ?? "");
+  const confirm = String(form.get("confirm") ?? "");
+  if (next.length < 10) return { ok: false, message: "Use at least 10 characters for the new password." };
+  if (next !== confirm) return { ok: false, message: "The two new passwords don't match." };
+  if (next === current) return { ok: false, message: "The new password is the same as the current one." };
+  const supabase = await db();
+  const { data: u } = await supabase.auth.getUser();
+  if (!u.user?.email) return { ok: false, message: "Signed out." };
+  // Prove it's you before changing it.
+  const { error: wrong } = await supabase.auth.signInWithPassword({ email: u.user.email, password: current });
+  if (wrong) return { ok: false, message: "Your current password is not right." };
+  const { error } = await supabase.auth.updateUser({ password: next });
+  if (error) return { ok: false, message: error.message };
+  return { ok: true, message: "Password changed. Other devices keep working until they sign out." };
+}
+
+export async function signOutEverywhere() {
+  const supabase = await db();
+  await supabase.auth.signOut({ scope: "global" });
+  redirect("/login");
+}

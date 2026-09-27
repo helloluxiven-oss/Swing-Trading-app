@@ -6,7 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { ALLOWED_EMAIL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "./lib/config";
 
-const PUBLIC = ["/login", "/api/health", "/api/logo"];
+const PUBLIC = ["/login", "/api/health", "/api/logo", "/api/alerts/run"];
 
 export async function proxy(req: NextRequest) {
   let res = NextResponse.next({ request: req });

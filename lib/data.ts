@@ -129,3 +129,17 @@ export async function getWatchlist(): Promise<Watch[]> {
   const { data } = await supabase.from("watchlist").select("symbol,market").order("created_at");
   return (data ?? []) as Watch[];
 }
+
+export async function getAlertSetup() {
+  const supabase = await db();
+  const [{ data: prefs }, { data: devices }, { data: log }] = await Promise.all([
+    supabase.from("alert_prefs").select("*").maybeSingle(),
+    supabase.from("push_subscriptions").select("endpoint,device,created_at").order("created_at"),
+    supabase.from("alert_log").select("key,title,body,sent_at").not("key", "like", "test:%").order("sent_at", { ascending: false }).limit(15),
+  ]);
+  return {
+    prefs: prefs as null | { enabled: boolean; sweeps: boolean; setups: boolean; stocks: boolean; min_grade: "A" | "B" | "C"; weekend_crypto: boolean; quiet_start: string; quiet_end: string },
+    devices: (devices ?? []) as { endpoint: string; device: string | null; created_at: string }[],
+    log: (log ?? []) as { key: string; title: string; body: string; sent_at: string }[],
+  };
+}
