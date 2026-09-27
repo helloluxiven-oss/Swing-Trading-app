@@ -464,3 +464,8 @@ body { overflow-x: clip; max-width: 100vw; }
   .chart-card { margin-left: -4px; margin-right: -4px; border-radius: 12px; }
 }
 @media (min-width: 1400px) { .tv-stage { height: calc(var(--h) + 80px) !important; } }
+/* Full screen: the chart owns every gesture (drag any direction, pinch to zoom). */
+.tv-full .tv-stage, .tv:fullscreen .tv-stage { touch-action: none; }
+.tv-full { height: 100dvh; }
+.tv-tfs button[aria-label^="Zoom"], .tv-tfs button[aria-label="Show everything"] { font-size: 15px; min-width: 32px; }
+@media (max-width: 900px) { .tv-bar { flex-wrap: wrap; overflow-x: visible; } .tv-bar .tv-tfs { overflow-x: auto; max-width: 100%; } }

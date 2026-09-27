@@ -14,6 +14,7 @@ import {
   type IChartApi,
   type UTCTimestamp,
 } from "lightweight-charts";
+import { gestureMode, zoomChart } from "./chart/zoom";
 import { Annotations, useChartTheme } from "./chart/annotations";
 
 type Bar = { t: number; o: number; h: number; l: number; c: number; v: number };
@@ -167,6 +168,9 @@ export default function Chart({
     setFull(!full);
   };
   useEffect(() => {
+    gestureMode(chartRef.current, full);
+  }, [full, THEME]);
+  useEffect(() => {
     const onFs = () => { if (!document.fullscreenElement) setFull(false); };
     document.addEventListener("fullscreenchange", onFs);
     return () => document.removeEventListener("fullscreenchange", onFs);
@@ -193,6 +197,9 @@ export default function Chart({
           {rangeSet.map(([k]) => (
             <button key={k} className={range === k ? "on" : ""} onClick={() => setRange(k)}>{k}</button>
           ))}
+          <button onClick={() => zoomChart(chartRef.current, 0.7, bars.length)} aria-label="Zoom in" title="Zoom in">＋</button>
+          <button onClick={() => zoomChart(chartRef.current, 1.45, bars.length)} aria-label="Zoom out" title="Zoom out">−</button>
+          <button onClick={() => chartRef.current?.timeScale().fitContent()} aria-label="Show everything" title="Fit all">⤢</button>
           <button onClick={cycleTheme} title="Chart background" aria-label={`Background: ${THEME.label}. Change`}>◐ {THEME.label}</button>
           <button onClick={toggleFull} aria-label={full ? "Exit full screen" : "Full screen"} title="Full screen">{full ? "✕" : "⛶"}</button>
         </div>
