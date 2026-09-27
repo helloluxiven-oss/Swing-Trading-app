@@ -305,3 +305,20 @@ textarea { min-height: 70px; resize: vertical; }
 .logo img { width: 78%; height: 78%; object-fit: contain; display: block; }
 .logo-fallback { background: linear-gradient(135deg, #7c3aed, #22d3ee); color: #fff; font-weight: 800; letter-spacing: -0.02em; }
 .who-wrap { display: flex; align-items: center; gap: 10px; min-width: 0; }
+/* NY sweep monitor */
+.pools { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; margin: 12px 0; }
+.pool { display: flex; flex-direction: column; gap: 2px; padding: 10px; border-radius: 10px; border: 1px solid var(--line-soft); background: var(--panel); }
+.pool.rest { border-color: #1e4a2e; }
+.pool.hit { border-color: #4d3d10; background: var(--warn-bg); }
+.pool.spent { opacity: 0.5; }
+.events { list-style: none; margin: 0; padding: 0; }
+.events > li { padding: 12px 0; border-top: 1px solid var(--line-soft); }
+.grade { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; font-weight: 800; font-size: 13px; margin-right: 4px; }
+.grade.gA { background: var(--up-bg); color: var(--up); }
+.grade.gB { background: var(--warn-bg); color: var(--warn); }
+.grade.gC { background: var(--card-2); color: var(--ink-3); }
+.factors { display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.factors span { padding: 3px 8px; border-radius: 6px; background: var(--card-2); }
+.factors .ok { color: var(--up); }
+.factors .no { color: var(--ink-3); }
+.alert-pop { position: fixed; right: 16px; bottom: 90px; z-index: 50; max-width: 360px; padding: 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--up); box-shadow: 0 10px 40px -10px rgba(34, 197, 94, 0.5); display: grid; gap: 6px; }

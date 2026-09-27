@@ -17,12 +17,12 @@ export const OANDA_ON = !!process.env.OANDA_TOKEN;
 
 type OandaCandles = { candles?: { complete: boolean; volume: number; time: string; mid?: { o: string; h: string; l: string; c: string } }[] };
 
-async function oandaCandles() {
+async function oandaCandles(granularity = "M5", count = 1500) {
   const token = process.env.OANDA_TOKEN;
   if (!token) return null;
   const host = process.env.OANDA_ENV === "live" ? "api-fxtrade.oanda.com" : "api-fxpractice.oanda.com";
   try {
-    const res = await fetch(`https://${host}/v3/instruments/XAU_USD/candles?granularity=M5&count=1500&price=M`, {
+    const res = await fetch(`https://${host}/v3/instruments/XAU_USD/candles?granularity=${granularity}&count=${count}&price=M`, {
       headers: { Authorization: `Bearer ${token}`, "Accept-Datetime-Format": "UNIX" },
       next: { revalidate: 10 },
     });
@@ -43,6 +43,51 @@ const SOURCES = [
   { symbol: "XAUUSD=X", label: "XAU/USD spot (Yahoo, delayed)" },
   { symbol: "GC=F", label: "COMEX gold futures GC=F (Yahoo, delayed ~10 min, trades above spot)" },
 ];
+
+export type Tf = "1m" | "5m" | "15m" | "1h" | "4h";
+export const TFS: Tf[] = ["1m", "5m", "15m", "1h", "4h"];
+
+/**
+ * Candles for the CHART at any timeframe. The strategy itself always runs on
+ * 5-minute candles (goldCandles); this only changes what you look at.
+ * 4H bars are aligned to gold's 17:00 New York day roll, like TradingView.
+ */
+export async function goldChart(tf: Tf) {
+  const oandaGran: Record<Tf, string> = { "1m": "M1", "5m": "M5", "15m": "M15", "1h": "H1", "4h": "H4" };
+  const o = await oandaCandles(oandaGran[tf], tf === "1m" ? 1200 : 1500);
+  if (o) return o;
+  const yahoo: Record<Tf, [string, string]> = { "1m": ["1m", "2d"], "5m": ["5m", "5d"], "15m": ["15m", "1mo"], "1h": ["60m", "3mo"], "4h": ["60m", "6mo"] };
+  const [interval, range] = yahoo[tf];
+  for (const s of SOURCES) {
+    const d = await getIntraday(s.symbol, interval, range, tf === "1m" ? 30 : 60);
+    if (d) return { ...d, candles: tf === "4h" ? to4h(d.candles) : d.candles, source: s.label, symbol: s.symbol, live: false };
+  }
+  return null;
+}
+
+/** Group hourly candles into 4-hour candles starting at 17:00, 21:00, 01:00 … New York. */
+function to4h(cs: Candle[]): Candle[] {
+  const out: Candle[] = [];
+  const f = new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", hour: "2-digit", hour12: false });
+  let cur: Candle | null = null;
+  let bucket = "";
+  for (const c of cs) {
+    const h = Number(f.format(new Date(c.t * 1000))) % 24;
+    const start = c.t - (((h - 17 + 24) % 4) * 3600) - (c.t % 3600);
+    const k = String(start);
+    if (k !== bucket || !cur) {
+      cur = { t: start, o: c.o, h: c.h, l: c.l, c: c.c, v: c.v };
+      out.push(cur);
+      bucket = k;
+    } else {
+      cur.h = Math.max(cur.h, c.h);
+      cur.l = Math.min(cur.l, c.l);
+      cur.c = c.c;
+      cur.v += c.v;
+    }
+  }
+  return out;
+}
 
 export async function goldCandles() {
   const o = await oandaCandles();

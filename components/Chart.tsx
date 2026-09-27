@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import {
   CandlestickSeries,
@@ -34,6 +35,9 @@ export default function Chart({
   height = 380,
   defaultRange = "6M",
   currency = "",
+  tf,
+  ranges,
+  timeZone,
 }: {
   bars: Bar[];
   ema20: (number | null)[];
@@ -41,12 +45,19 @@ export default function Chart({
   levels?: { entry: number; stop: number; target: number } | null;
   avgCost?: number | null;
   height?: number;
-  defaultRange?: (typeof RANGES)[number][0];
+  defaultRange?: string;
   currency?: string;
+  /** Timeframe switcher: current timeframe and the page it links to (`?tf=`). */
+  tf?: { current: string; options: string[]; href: string };
+  /** Range buttons as [label, bars]; defaults to 1M/3M/6M/1Y of daily bars. */
+  ranges?: [string, number][];
+  /** Show intraday times in this timezone (the exchange's). */
+  timeZone?: string;
 }) {
+  const rangeSet: [string, number][] = ranges ?? RANGES.map(([k, n]) => [k, n]);
   const el = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
-  const [range, setRange] = useState<(typeof RANGES)[number][0]>(defaultRange);
+  const [range, setRange] = useState<string>(rangeSet.some((r) => r[0] === defaultRange) ? defaultRange : rangeSet[rangeSet.length - 1][0]);
   const last = bars[bars.length - 1];
   const [hover, setHover] = useState<Bar | null>(null);
   const shown = hover ?? last;
@@ -63,7 +74,14 @@ export default function Chart({
       handleScale: { axisPressedMouseMove: true },
     });
     chartRef.current = chart;
-    const time = (t: number) => t as UTCTimestamp;
+    // lightweight-charts shows UTC; shift intraday bars so the axis reads exchange time.
+    const off = (t: number) => {
+      if (!timeZone) return 0;
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone, hour12: false, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(t * 1000)).map((x) => [x.type, x.value]));
+      return (Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - t * 1000) / 1000;
+    };
+    const time = (t: number) => (t + off(t)) as UTCTimestamp;
+    if (timeZone) chart.applyOptions({ timeScale: { timeVisible: true, secondsVisible: false } });
 
     const candles = chart.addSeries(CandlestickSeries, {
       upColor: "#22c55e", downColor: "#f43f5e", borderVisible: false, wickUpColor: "#22c55e", wickDownColor: "#f43f5e",
@@ -88,18 +106,19 @@ export default function Chart({
     }
     if (avgCost) candles.createPriceLine({ price: avgCost, color: "#fbbf24", lineWidth: 1, lineStyle: 1, title: "Your avg" });
 
-    const byTime = new Map(bars.map((b) => [b.t, b]));
+    const byTime = new Map(bars.map((b) => [b.t + off(b.t), b]));
     chart.subscribeCrosshairMove((p) => setHover(p.time ? byTime.get(p.time as number) ?? null : null));
 
     return () => {
       chart.remove();
       chartRef.current = null;
     };
-  }, [bars, ema20, ema50, levels, avgCost]);
+  }, [bars, ema20, ema50, levels, avgCost, timeZone]);
 
   useEffect(() => {
-    const n = RANGES.find((r) => r[0] === range)![1];
+    const n = rangeSet.find((r) => r[0] === range)?.[1] ?? rangeSet[0][1];
     chartRef.current?.timeScale().setVisibleLogicalRange({ from: Math.max(0, bars.length - n), to: bars.length + 2 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range, bars.length]);
 
   const chg = shown ? ((shown.c - shown.o) / shown.o) * 100 : 0;
@@ -110,7 +129,7 @@ export default function Chart({
       <div className="chart-head">
         {shown && (
           <div className="ohlc small">
-            <span className="muted">{new Date(shown.t * 1000).toISOString().slice(0, 10)}</span>
+            <span className="muted">{timeZone ? new Intl.DateTimeFormat("en-GB", { timeZone, day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(shown.t * 1000)) : new Date(shown.t * 1000).toISOString().slice(0, 10)}</span>
             <span>O <b>{f(shown.o)}</b></span>
             <span>H <b>{f(shown.h)}</b></span>
             <span>L <b>{f(shown.l)}</b></span>
@@ -121,8 +140,15 @@ export default function Chart({
         <div className="row" style={{ gap: 8 }}>
           <span className="legend"><i style={{ background: "#b39dfb" }} />20 EMA</span>
           <span className="legend"><i style={{ background: "#22d3ee" }} />50 EMA</span>
+          {tf && (
+            <div className="seg small" role="tablist" aria-label="Timeframe">
+              {tf.options.map((k) => (
+                <Link key={k} href={`${tf.href}?tf=${k}`} scroll={false} className={tf.current === k ? "on" : ""} role="tab" aria-selected={tf.current === k}>{k.toUpperCase()}</Link>
+              ))}
+            </div>
+          )}
           <div className="seg small">
-            {RANGES.map(([k]) => (
+            {rangeSet.map(([k]) => (
               <button key={k} className={range === k ? "on" : ""} onClick={() => setRange(k)}>{k}</button>
             ))}
           </div>

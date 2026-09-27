@@ -147,3 +147,33 @@ export async function getIntraday(yahoo: string, interval = "5m", range = "5d", 
     return null;
   }
 }
+
+export type StockTf = "1m" | "5m" | "1h" | "4h" | "1d";
+export const STOCK_TFS: StockTf[] = ["1m", "5m", "1h", "4h", "1d"];
+
+/**
+ * Intraday candles for a stock chart (display only — the swing rules stay on
+ * daily candles). 4H groups each session's hourly bars in fours from the open,
+ * like TradingView (NSE: 09:15 and 13:15; US: 09:30 and 13:30).
+ */
+export async function stockIntraday(symbol: string, market: Market, tf: Exclude<StockTf, "1d">): Promise<Candle[] | null> {
+  const map = { "1m": ["1m", "2d"], "5m": ["5m", "5d"], "1h": ["60m", "3mo"], "4h": ["60m", "6mo"] } as const;
+  const [interval, range] = map[tf];
+  const d = await getIntraday(yahooSymbol(symbol, market), interval, range, tf === "1m" ? 20 : 60);
+  if (!d) return null;
+  if (tf !== "4h") return d.candles;
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: market === "IN" ? "Asia/Kolkata" : "America/New_York" });
+  const out: Candle[] = [];
+  let curDay = "", n = 0;
+  for (const c of d.candles) {
+    const k = day.format(new Date(c.t * 1000));
+    if (k !== curDay) { curDay = k; n = 0; }
+    if (n % 4 === 0) out.push({ ...c });
+    else {
+      const b = out[out.length - 1];
+      b.h = Math.max(b.h, c.h); b.l = Math.min(b.l, c.l); b.c = c.c; b.v += c.v;
+    }
+    n++;
+  }
+  return out;
+}

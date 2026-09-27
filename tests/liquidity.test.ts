@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { analyseLiquidity, dayLevels, sessionAt, sessionBoxes, headlineLean } from "../lib/liquidity";
+import { analyseLiquidity, dayLevels, nyDesk, sessionAt, sessionBoxes, headlineLean } from "../lib/liquidity";
 import { portfolioHistory } from "../lib/portfolio";
 import type { Candle } from "../lib/indicators";
 
@@ -103,4 +103,66 @@ test("day levels: every session's high and low, with sweeps marked", () => {
   assert.ok(asiaHigh.sweptI !== null, "London ran the Asia high");
   assert.equal(asiaLow.sweptI, null, "Asia low still resting");
   assert.ok(lv.some((l) => l.session === "London" && l.live));
+});
+
+/** Asia 1990–2010, London 1994–2006, a quiet hour, then New York bars. */
+function withNY(nyBars: [number, number, number, number, number?][]): Candle[] {
+  const london: [number, number, number, number][] = [];
+  for (let k = 0; k < 48; k++) london.push([2000, k === 10 ? 2006 : 2001, k === 30 ? 1994 : 1999, 2000]);
+  for (let k = 0; k < 12; k++) london.push([2000, 2001, 1999, 2000]); // 07:00–08:00 NY, no session
+  const cs = day(london);
+  nyBars.forEach(([o, h, l, c, v], k) => cs.push({ ...bar(84 + 60 + k, o, h, l, c), v: v ?? 100 }));
+  return cs;
+}
+
+test("NY monitor: before NY lists resting pools", () => {
+  const cs = withNY([]);
+  const d = nyDesk(cs, { now: NOW(cs) })!;
+  assert.equal(d.phase, "pre");
+  const lh = d.pools.find((p) => p.name === "London high")!;
+  assert.equal(lh.price, 2006);
+  assert.equal(lh.takenBeforeNY, false);
+  assert.equal(d.events.length, 0);
+});
+
+test("NY monitor: London high sweep → reclaim → shift is graded and planned", () => {
+  const cs = withNY([
+    [2000, 2002, 1999, 2001],
+    [2001, 2003, 1998.5, 2002], // swing low 1998.5
+    [2002, 2008, 2001, 2004, 400], // sweeps London high 2006 on a volume spike
+    [2004, 2005, 2000, 2001], // closes back below 2006 → reclaimed
+    [2001, 2002, 1996, 1997], // closes below the swing low → shift
+  ]);
+  const d = nyDesk(cs, { now: NOW(cs) })!;
+  assert.equal(d.phase, "live");
+  assert.equal(d.events.length, 1);
+  const e = d.events[0];
+  assert.deepEqual(e.pools, ["London high"]);
+  assert.equal(e.status, "ready");
+  assert.equal(e.plan?.side, "short");
+  assert.ok(e.plan!.stop > 2008);
+  assert.equal(e.plan!.tp2, 1994, "TP2 = nearest untouched pool below (London low)");
+  assert.ok(e.factors.find((f) => f.label.startsWith("In the NY killzone"))!.pass);
+  assert.ok(e.factors.find((f) => f.label.startsWith("Volume spike"))!.pass);
+  assert.equal(e.grade, "A");
+  assert.equal(d.primary?.id, e.id);
+});
+
+test("NY monitor: holding beyond the level is a breakout, not a sweep", () => {
+  const cs = withNY([
+    [2004, 2008, 2003, 2007],
+    [2007, 2009, 2006.5, 2008],
+    [2008, 2009.5, 2007, 2009],
+  ]);
+  const e = nyDesk(cs, { now: NOW(cs) })!.events[0];
+  assert.equal(e.status, "breakout");
+  assert.equal(e.plan, null);
+});
+
+test("NY monitor: red news near the sweep costs points", () => {
+  const cs = withNY([[2002, 2008, 2001, 2004], [2004, 2005, 2000, 2001]]);
+  const sweepT = cs[cs.length - 2].t;
+  const calm = nyDesk(cs, { now: NOW(cs) })!.events[0];
+  const news = nyDesk(cs, { now: NOW(cs), redNews: [sweepT + 600] })!.events[0];
+  assert.ok(news.score < calm.score);
 });

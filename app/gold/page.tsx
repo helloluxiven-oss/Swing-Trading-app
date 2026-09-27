@@ -1,9 +1,10 @@
-import { goldCandles, goldNews, usdEvents } from "@/lib/gold";
-import { analyseLiquidity, dayLevels, headlineLean, prevDayClose, SESSIONS, sessionAt, tzOffset, type Stage } from "@/lib/liquidity";
+import { goldCandles, goldChart, goldNews, TFS, usdEvents, type Tf } from "@/lib/gold";
+import { analyseLiquidity, dayLevels, nyDesk, type SweepEvent, headlineLean, prevDayClose, SESSIONS, sessionAt, tzOffset, type Stage } from "@/lib/liquidity";
 import { getSettings } from "@/lib/data";
 import { ago, pct, tone } from "@/lib/format";
 import IntradayChart, { type Level, type Line, type Mark } from "@/components/IntradayChart";
 import AutoRefresh from "@/components/AutoRefresh";
+import SweepAlert from "@/components/SweepAlert";
 
 export const dynamic = "force-dynamic";
 
@@ -35,8 +36,20 @@ function nyWindowLocal(tz: string) {
   return `${f(at(8))}–${f(at(12))}`;
 }
 
-export default async function GoldPage() {
-  const [data, news, events, settings] = await Promise.all([goldCandles(), goldNews(), usdEvents(), getSettings()]);
+const EV_STATUS: Record<SweepEvent["status"], { label: string; cls: string }> = {
+  testing: { label: "Testing beyond", cls: "watch" },
+  breakout: { label: "Breakout (accepted)", cls: "bad" },
+  reclaimed: { label: "Reclaimed · wait for shift", cls: "watch" },
+  ready: { label: "Setup ready", cls: "confirmed" },
+  triggered: { label: "In the trade", cls: "confirmed" },
+  invalidated: { label: "Failed", cls: "bad" },
+  done: { label: "Played out", cls: "none" },
+};
+
+export default async function GoldPage({ searchParams }: { searchParams: Promise<{ tf?: string }> }) {
+  const sp = await searchParams;
+  const tf: Tf = (TFS as string[]).includes(sp.tf ?? "") ? (sp.tf as Tf) : "5m";
+  const [data, news, events, settings, chartData] = await Promise.all([goldCandles(), goldNews(), usdEvents(), getSettings(), tf === "5m" ? Promise.resolve(null) : goldChart(tf)]);
   if (!data) {
     return (
       <>
@@ -57,16 +70,23 @@ export default async function GoldPage() {
   const nextHigh = high.find((e) => e.time > now);
   const upcoming = events.filter((e) => e.time > now - 3600).slice(0, 8);
 
-  const bars = cs.map(({ t, o, h, l, c }) => ({ t, o, h, l, c }));
+  // NY sweep monitor: every resting pool of the day, graded sweeps during New York.
+  const desk = nyDesk(cs, { now, redNews: high.map((e) => e.time) });
+  const nyMode = !!desk && (desk.phase === "live" || (desk.phase === "after" && desk.events.length > 0));
+  const nyPlan = desk?.primary?.plan && (desk.primary.status === "ready" || desk.primary.status === "triggered") ? desk.primary.plan : null;
+
+  // The chart can be any timeframe; the strategy always reads 5-minute candles.
+  const ccs = chartData?.candles ?? cs;
+  const bars = ccs.map(({ t, o, h, l, c }) => ({ t, o, h, l, c }));
   const colour = Object.fromEntries(SESSIONS.map((s) => [s.name, s.color])) as Record<string, string>;
-  const bands = cs.map((c) => {
+  const bands = ccs.map((c) => {
     const s = sessionAt(c.t);
     return s ? colour[s] : null;
   });
-  const offsets = cs.map((c) => tzOffset(c.t));
+  const offsets = ccs.map((c) => tzOffset(c.t));
   const lines: Line[] = [];
   const marks: Mark[] = [];
-  const active = r?.plan && (r.stage === "ready" || r.stage === "triggered") ? r.plan : null;
+  const active = nyMode ? nyPlan : r?.plan && (r.stage === "ready" || r.stage === "triggered") ? r.plan : null;
   // Every session high/low of the day: solid until swept, dashed (ending at the sweep) once taken.
   const SESSION_COLOUR: Record<string, string> = { Asia: "#60a5fa", London: "#22c55e", "New York": "#f472b6" };
   const short = { Asia: "AS", London: "LO", "New York": "NY" } as const;
@@ -88,10 +108,20 @@ export default async function GoldPage() {
     lines.push({ price: active.tp1, color: "#22c55e", title: "TP1", style: 0 });
     lines.push({ price: active.tp2, color: "#22c55e", title: "TP2", style: 2 });
   }
-  if (r?.sweep) marks.push({ t: cs[r.sweep.extremeI].t, above: r.sweep.side === "high", color: "#fbbf24", text: "Sweep" });
-  if (r?.mss?.i != null) marks.push({ t: cs[r.mss.i].t, above: r.sweep?.side === "high", color: "#b39dfb", text: "MSS" });
+  if (desk?.events.length) {
+    for (const e of desk.events) {
+      const gradeCol = e.grade === "A" ? "#22c55e" : e.grade === "B" ? "#fbbf24" : "#8a8aa6";
+      marks.push({ t: cs[e.extremeI].t, above: e.kind === "high", color: gradeCol, text: `⚡ ${e.pools.map((n) => n.replace(" high", " H").replace(" low", " L").replace("London", "LO").replace("Asia", "AS").replace("Prev day", "PD")).join("+")} · ${e.grade}` });
+      if (e.mssI !== null) marks.push({ t: cs[e.mssI].t, above: e.kind === "high", color: "#b39dfb", text: "MSS" });
+    }
+  } else {
+    if (r?.sweep) marks.push({ t: cs[r.sweep.extremeI].t, above: r.sweep.side === "high", color: "#fbbf24", text: "Sweep" });
+    if (r?.mss?.i != null) marks.push({ t: cs[r.mss.i].t, above: r.sweep?.side === "high", color: "#b39dfb", text: "MSS" });
+  }
 
-  const st = r ? STAGE[r.stage] : STAGE["no-data"];
+  const st = nyMode && desk?.primary ? EV_STATUS[desk.primary.status] : r ? STAGE[r.stage] : STAGE["no-data"];
+  const headline = nyMode ? desk!.headline : desk?.phase === "pre" && r?.current !== "London" ? desk.headline : r?.headline ?? "No analysis";
+  const action = nyMode ? desk!.action : desk?.phase === "pre" && r?.current !== "London" ? desk.action : r?.action;
   // Size: risk % of the USD capital, 100 oz per standard lot.
   const riskUsd = (settings.capitalUsd * settings.riskPct) / 100;
   const lots = active ? riskUsd / (active.risk * 100) : null;
@@ -109,6 +139,7 @@ export default async function GoldPage() {
             <div className="row chips">
               <span className={`pill ${st.cls}`}>{st.label}</span>
               <span className="pill">{r?.current ? `${r.current} session` : "Between sessions"}</span>
+              <SweepAlert events={(desk?.events ?? []).map((e) => ({ id: e.id, text: e.text, grade: e.grade }))} />
               {r?.prev && <span className="pill">Prev {r.prev.name}: {f2(r.prev.low)}–{f2(r.prev.high)}</span>}
               {blackout ? (
                 <span className="pill bad">News blackout: {blackout.title}</span>
@@ -132,11 +163,11 @@ export default async function GoldPage() {
         </div>
       )}
       <div className={`card decide ${st.cls}`}>
-        <div className="small muted">What to do now · previous-session liquidity sweep</div>
-        <h2 style={{ margin: "4px 0 6px" }}>{r?.headline ?? "No analysis"}</h2>
+        <div className="small muted">What to do now · {nyMode ? "NY sweep monitor" : "previous-session liquidity sweep"}</div>
+        <h2 style={{ margin: "4px 0 6px" }}>{headline}</h2>
         <p style={{ margin: 0 }}>
           {blackout ? `High-impact USD news (${blackout.title}) is inside the blackout window — no new entries until 15 minutes after the release. ` : ""}
-          {r?.action}
+          {action}
         </p>
         {active && (
           <div className="plan-grid">
@@ -150,8 +181,52 @@ export default async function GoldPage() {
       </div>
 
       <div className="card" style={{ marginTop: 16 }}>
-        <IntradayChart bars={bars} bands={bands} lines={lines} marks={marks} levels={levels} offsets={offsets} />
+        <IntradayChart bars={bars} bands={bands} lines={lines} marks={marks} levels={levels} offsets={offsets} tf={tf} />
+        {tf !== "5m" && <div className="small muted" style={{ marginTop: 6 }}>Viewing {tf.toUpperCase()}. Sweeps, grades and the plan are always read from 5-minute candles.</div>}
       </div>
+
+      {desk && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="row between">
+            <h3 className="card-title" style={{ margin: 0 }}>NY sweep monitor</h3>
+            <span className={`pill ${desk.phase === "live" ? "confirmed" : "none"}`}>{desk.phase === "live" ? "● NY live" : desk.phase === "pre" ? "Before NY" : "NY closed"}</span>
+          </div>
+          <div className="pools">
+            {[...desk.pools].sort((a, b) => b.price - a.price).map((p) => {
+              const ev = desk.events.find((e) => e.pools.includes(p.name));
+              return (
+                <div key={p.name} className={`pool ${p.takenBeforeNY ? "spent" : ev ? "hit" : "rest"}`}>
+                  <b>{p.name}</b>
+                  <span className="mono">{f2(p.price)}</span>
+                  <span className="small">{p.takenBeforeNY ? "spent before NY" : ev ? `swept · ${ev.grade}` : `resting · ${f2(Math.abs(p.price - data.price))} away`}</span>
+                </div>
+              );
+            })}
+          </div>
+          {desk.events.length ? (
+            <ul className="events">
+              {[...desk.events].reverse().map((e) => (
+                <li key={e.id}>
+                  <div className="row between">
+                    <span><span className={`grade g${e.grade}`}>{e.grade}</span> <b>{e.text.split(" · ").slice(0, 2).join(" · ")}</b></span>
+                    <span className={`pill ${EV_STATUS[e.status].cls}`}>{EV_STATUS[e.status].label}</span>
+                  </div>
+                  <div className="meter" style={{ margin: "8px 0" }}><span className="bar"><i style={{ width: `${e.score}%` }} /></span><span className="small">{e.score}/100</span></div>
+                  <div className="factors">
+                    {e.factors.map((f) => (
+                      <span key={f.label} className={f.pass ? "ok" : "no"}>{f.pass ? "✓" : "✕"} {f.label}{f.pass && f.points > 0 ? ` +${f.points}` : f.points < 0 ? ` ${f.points}` : ""}</span>
+                    ))}
+                  </div>
+                  {e.plan && <div className="small muted" style={{ marginTop: 6 }}>{e.plan.side === "short" ? "Sell" : "Buy"} {f2(e.plan.entry)} · stop {f2(e.plan.stop)} · TP1 {f2(e.plan.tp1)} · TP2 {f2(e.plan.tp2)} ({e.plan.rrTp2}R)</div>}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="small muted" style={{ marginTop: 10 }}>{desk.phase === "pre" ? "No NY sweeps yet — the session hasn't started. Resting pools above are what NY will hunt." : "No resting pool swept in NY yet."}</p>
+          )}
+          <p className="small muted">Grade = level (London 25, PDH/PDL 20, Asia 15) + confluence 10 + fast rejection 20 + killzone 15 + clean wick 10 + volume 10 + structure shift 20 + no news 10, minus 20 if NY took both London sides. A ≥ 75 · B ≥ 55 · C below.</p>
+        </div>
+      )}
 
       <div className="grid g2" style={{ marginTop: 16 }}>
         <div className="card">
