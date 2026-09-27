@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import { scanMarket, type MarketScan, type Row } from "@/lib/scan";
-import { getHoldings, getSettings, getTrades, getWatchlist, recentClosed } from "@/lib/data";
+import { getSettings, getWatchlist, recentClosed } from "@/lib/data";
 import { inOfficeHours, lossStreak } from "@/lib/gate";
 import { rank, scoreRules, tradeable } from "@/lib/score";
 import { focus52 } from "@/lib/focus52";
-import { findStock } from "@/lib/universe";
 import { money, pct, tone } from "@/lib/format";
 import TopList, { type MarketTop, type TopRow } from "@/components/TopList";
-import FocusCard from "@/components/FocusCard";
 import Favourites from "@/components/Favourites";
 import type { Watch } from "@/lib/data";
 import AreaChart from "@/components/AreaChart";
@@ -89,18 +87,6 @@ function Pulse({ s }: { s: MarketScan }) {
   );
 }
 
-async function Focus({ list }: { list: { symbol: string; market: "IN" | "US" }[] }) {
-  const [holdings, trades] = await Promise.all([getHoldings(), getTrades()]);
-  const stocks = list.map((w) => findStock(w.symbol, w.market)).filter((s): s is NonNullable<typeof s> => !!s);
-  return (
-    <div className="stack">
-      {stocks.map((s) => (
-        <FocusCard key={`${s.market}:${s.symbol}`} stock={s} holdings={holdings} trades={trades} />
-      ))}
-    </div>
-  );
-}
-
 export default async function Today() {
   const [inScan, usScan, settings, recent, watch] = await Promise.all([
     scanMarket("IN"),
@@ -112,8 +98,6 @@ export default async function Today() {
   // NVDA is pinned until you star your own favourites.
   // Starter favourites until you star your own: your swing (NVDA), gold and bitcoin.
   const favs: Watch[] = watch.length ? watch : [{ symbol: "XAUUSD", market: "FX" }, { symbol: "BTC", market: "CRYPTO" }, { symbol: "NVDA", market: "US" }];
-  const stockFavs = favs.filter((w): w is { symbol: string; market: "IN" | "US" } => w.market === "IN" || w.market === "US");
-  const focusList = stockFavs.length ? stockFavs.slice(0, 2) : [{ symbol: "NVDA", market: "US" as const }];
   const starred = new Set(watch.map((w) => `${w.market}:${w.symbol}`));
 
   const now = new Date();
@@ -149,10 +133,6 @@ export default async function Today() {
         <Favourites list={favs} suggested={!watch.length} />
       </Suspense>
 
-      <h2 className="section-title">Stock focus</h2>
-      <Suspense fallback={<div className="card skeleton" style={{ height: 420 }} />}>
-        <Focus list={focusList} />
-      </Suspense>
 
       <h2 className="section-title">Markets</h2>
       <div className="grid g2">
