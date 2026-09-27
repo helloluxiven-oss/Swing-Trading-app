@@ -2,6 +2,7 @@ import Link from "next/link";
 import Logo from "./Logo";
 import Sparkline from "./Sparkline";
 import StarButton from "./StarButton";
+import MiniChart from "./MiniChart";
 import { analyseOne } from "@/lib/scan";
 import { candles } from "@/lib/feeds";
 import { analyseLiquidity, nyDesk, prevDayClose } from "@/lib/liquidity";
@@ -28,6 +29,9 @@ type Tile = {
   hot: boolean;
   logo: React.ReactNode;
   starred: boolean;
+  bars: { t: number; o: number; h: number; l: number; c: number }[];
+  precision: number;
+  span: string;
 };
 
 const BADGE: Record<string, [string, string]> = {
@@ -91,6 +95,10 @@ async function stockTile(w: Watch, starred: boolean): Promise<Tile | null> {
     hot: tradeable(st),
     logo: <Logo symbol={stock.symbol} market={w.market} size={36} />,
     starred,
+    // Daily candles, last ~3 months, ending at the live price.
+    bars: [...live.candles.slice(-65), ...(live.forming && q ? [{ ...live.forming, c: q.price, h: Math.max(live.forming.h, q.price), l: Math.min(live.forming.l, q.price) }] : [])].map(({ t, o, h, l, c }) => ({ t, o, h, l, c })),
+    precision: 2,
+    span: "Daily · 3 months",
   };
 }
 
@@ -124,7 +132,23 @@ async function deskTile(w: Watch, starred: boolean): Promise<Tile | null> {
     hot: stage === "ready" || stage === "triggered",
     logo: <Badge inst={inst} />,
     starred,
+    // 15-minute candles from the 5-minute feed, last ~24 hours.
+    bars: to15(cs.slice(-288)),
+    precision: inst.precision,
+    span: "15m · 24 hours",
   };
+}
+
+/** Merge 5-minute candles into 15-minute ones (fewer, clearer candles for a small chart). */
+function to15(cs: { t: number; o: number; h: number; l: number; c: number }[]) {
+  const out: { t: number; o: number; h: number; l: number; c: number }[] = [];
+  for (const c of cs) {
+    const k = c.t - (c.t % 900);
+    const last = out[out.length - 1];
+    if (last && last.t === k) { last.h = Math.max(last.h, c.h); last.l = Math.min(last.l, c.l); last.c = c.c; }
+    else out.push({ t: k, o: c.o, h: c.h, l: c.l, c: c.c });
+  }
+  return out;
 }
 
 /** Everything you follow, on one screen: stocks, XAU / forex, crypto — each read against your own strategy. */
@@ -132,6 +156,9 @@ export default async function Favourites({ list, suggested }: { list: Watch[]; s
   const tiles = (await Promise.all(list.map((w) => (w.market === "FX" || w.market === "CRYPTO" ? deskTile(w, !suggested) : stockTile(w, !suggested))))).filter((t): t is Tile => !!t);
   const hot = tiles.filter((t) => t.hot).length;
   const order: Tile["kind"][] = ["Forex & commodities", "Crypto", "Stock"];
+  // Keep your own order (first three starred = the three charts); ready setups only reorder the tiles below.
+  const top = tiles.slice(0, 3);
+  const rest = tiles.slice(3).sort((a, b) => Number(b.hot) - Number(a.hot) || order.indexOf(a.kind) - order.indexOf(b.kind));
   return (
     <section className="favs">
       <div className="row between" style={{ marginBottom: 10 }}>
@@ -141,10 +168,31 @@ export default async function Favourites({ list, suggested }: { list: Watch[]; s
           {suggested ? " · starter list — tap ☆ on any stock, XAU/forex or crypto to build yours" : " · tap ★ to remove"}
         </span>
       </div>
-      <div className="fav-grid">
-        {tiles
-          .sort((a, b) => Number(b.hot) - Number(a.hot) || order.indexOf(a.kind) - order.indexOf(b.kind))
-          .map((t) => (
+      {/* Your first three favourites as small live charts, side by side. Tap to open the full chart. */}
+      <div className="mini-row">
+        {top.map((t) => (
+          <Link key={t.key} href={t.href} className={`mini-card ${t.hot ? "hot" : ""}`} aria-label={`Open ${t.symbol} chart`}>
+            <div className="mini-head">
+              {t.logo}
+              <div className="fav-who">
+                <b>{t.symbol}</b>
+                <span className="small muted">{t.span}</span>
+              </div>
+              <div className="mini-px">
+                <b>{t.price}</b>
+                <span className={`small ${tone(t.changePct)}`}>{pct(t.changePct)}</span>
+              </div>
+            </div>
+            <MiniChart bars={t.bars} precision={t.precision} />
+            <div className="fav-foot">
+              <span className={`pill ${t.statusCls}`}>{t.status}</span>
+              <span className="small muted">Open chart →</span>
+            </div>
+          </Link>
+        ))}
+      </div>
+      {!!rest.length && <div className="fav-grid" style={{ marginTop: 12 }}>
+        {rest.map((t) => (
             <Link key={t.key} href={t.href} className={`fav ${t.hot ? "hot" : ""}`}>
               <div className="fav-head">
                 {t.logo}
@@ -166,7 +214,7 @@ export default async function Favourites({ list, suggested }: { list: Watch[]; s
               {t.hint && <div className="small muted fav-hint">{t.hint}</div>}
             </Link>
           ))}
-      </div>
+      </div>}
     </section>
   );
 }

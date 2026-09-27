@@ -511,3 +511,17 @@ details summary { cursor: pointer; }
   .favs > .row > span { text-align: left; }
 }
 @media (max-width: 900px) { .toprow .logo { width: 26px !important; height: 26px !important; } .toprow .rank { width: 22px; height: 22px; } }
+
+/* ---- dashboard mini charts (first three favourites) ---- */
+.mini-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mini-card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); color: inherit; min-width: 0; transition: border-color 0.15s, transform 0.15s; }
+.mini-card:hover { border-color: var(--violet-line); transform: translateY(-2px); }
+.mini-card.hot { border-color: #1e4a2e; box-shadow: 0 0 26px -10px rgba(34, 197, 94, 0.55); }
+.mini-head { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mini-px { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; flex: none; }
+.mini-px b { font-size: 17px; }
+.mini-chart { border-radius: 10px; overflow: hidden; pointer-events: none; }
+@media (max-width: 900px) {
+  .mini-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 10px; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .mini-card { flex: 0 0 82%; scroll-snap-align: start; }
+}
