@@ -23,10 +23,11 @@ const LINKS = [
   ["/settings", "Rules", I.rules],
 ] as const;
 
-export default function Nav() {
+/** `tabs` renders the phone tab bar (outside the sticky header, so it can stay fixed while you scroll). */
+export default function Nav({ tabs = false }: { tabs?: boolean }) {
   const path = usePathname();
   return (
-    <nav className="nav" aria-label="Main">
+    <nav className={tabs ? "nav tabs" : "nav top-nav"} aria-label={tabs ? "Main (tabs)" : "Main"}>
       {LINKS.map(([href, label, icon]) => {
         const on = href === "/" ? path === "/" : path.startsWith(href) || (href === "/scan" && path.startsWith("/stock"));
         return (

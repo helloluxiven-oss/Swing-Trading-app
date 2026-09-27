@@ -9,6 +9,8 @@ import { findStock } from "@/lib/universe";
 import { money, pct, tone } from "@/lib/format";
 import TopList, { type MarketTop, type TopRow } from "@/components/TopList";
 import FocusCard from "@/components/FocusCard";
+import Favourites from "@/components/Favourites";
+import type { Watch } from "@/lib/data";
 import AreaChart from "@/components/AreaChart";
 import AutoRefresh from "@/components/AutoRefresh";
 
@@ -108,7 +110,10 @@ export default async function Today() {
     getWatchlist(),
   ]);
   // NVDA is pinned until you star your own favourites.
-  const focusList = watch.length ? watch : [{ symbol: "NVDA", market: "US" as const }];
+  // Starter favourites until you star your own: your swing (NVDA), gold and bitcoin.
+  const favs: Watch[] = watch.length ? watch : [{ symbol: "XAUUSD", market: "FX" }, { symbol: "BTC", market: "CRYPTO" }, { symbol: "NVDA", market: "US" }];
+  const stockFavs = favs.filter((w): w is { symbol: string; market: "IN" | "US" } => w.market === "IN" || w.market === "US");
+  const focusList = stockFavs.length ? stockFavs.slice(0, 2) : [{ symbol: "NVDA", market: "US" as const }];
   const starred = new Set(watch.map((w) => `${w.market}:${w.symbol}`));
 
   const now = new Date();
@@ -140,7 +145,11 @@ export default async function Today() {
         </div>
       </section>
 
-      <h2 className="section-title">⭐ My focus</h2>
+      <Suspense fallback={<div className="card skeleton" style={{ height: 260, marginTop: 18 }} />}>
+        <Favourites list={favs} suggested={!watch.length} />
+      </Suspense>
+
+      <h2 className="section-title">Stock focus</h2>
       <Suspense fallback={<div className="card skeleton" style={{ height: 420 }} />}>
         <Focus list={focusList} />
       </Suspense>

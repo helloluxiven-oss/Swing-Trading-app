@@ -87,6 +87,10 @@ export default function Chart({
     const chart = createChart(el.current, {
       localization: { locale: "en-US" },
       autoSize: true,
+      // Phones: a vertical swipe scrolls the page; drag sideways / pinch to move and zoom the chart.
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },
+      handleScale: { mouseWheel: true, pinch: true, axisPressedMouseMove: true, axisDoubleClickReset: true },
+      kineticScroll: { touch: true, mouse: false },
       layout: { background: { type: ColorType.Solid, color: THEME.bg }, textColor: THEME.text, fontSize: 11, fontFamily: "Inter, system-ui, sans-serif", attributionLogo: false },
       grid: { vertLines: { color: THEME.grid }, horzLines: { color: THEME.grid } },
       rightPriceScale: { borderColor: THEME.border, scaleMargins: { top: 0.08, bottom: 0.16 } },
@@ -96,7 +100,6 @@ export default function Chart({
         vertLine: { color: THEME.cross, style: LineStyle.Dashed, labelBackgroundColor: THEME.crossLabel },
         horzLine: { color: THEME.cross, style: LineStyle.Dashed, labelBackgroundColor: THEME.crossLabel },
       },
-      handleScale: { axisPressedMouseMove: true },
     });
     chartRef.current = chart;
     // lightweight-charts shows UTC; shift intraday bars so the axis reads exchange time.
@@ -194,7 +197,7 @@ export default function Chart({
           <button onClick={toggleFull} aria-label={full ? "Exit full screen" : "Full screen"} title="Full screen">{full ? "✕" : "⛶"}</button>
         </div>
       </div>
-      <div className="tv-stage" style={{ height: full ? undefined : height }}>
+      <div className="tv-stage" style={{ ["--h" as string]: `${height}px`, height: full ? undefined : "var(--h)" }}>
         {shown && (
           <div className="tv-legend">
             {symbol && <b>{symbol}</b>}

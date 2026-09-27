@@ -58,6 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </header>
         )}
         <main className={`wrap ${signedIn ? "with-tabs" : ""}`}>{children}</main>
+        {signedIn && <Nav tabs />}
       </body>
     </html>
   );

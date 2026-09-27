@@ -1,9 +1,9 @@
 "use client";
 import { useState, useTransition } from "react";
 import { toggleWatch } from "@/app/actions";
-import type { Market } from "@/lib/plan";
+import type { FavMarket } from "@/lib/data";
 
-export default function StarButton({ symbol, market, starred }: { symbol: string; market: Market; starred: boolean }) {
+export default function StarButton({ symbol, market, starred }: { symbol: string; market: FavMarket; starred: boolean }) {
   const [on, setOn] = useState(starred);
   const [pending, start] = useTransition();
   return (

@@ -8,6 +8,8 @@ import type { Drawings } from "@/components/chart/annotations";
 import AutoRefresh from "@/components/AutoRefresh";
 import SweepAlert from "@/components/SweepAlert";
 import InstrumentStrip from "@/components/InstrumentStrip";
+import StarButton from "@/components/StarButton";
+import { getWatchlist } from "@/lib/data";
 
 const STAGE: Record<Stage, { label: string; cls: string }> = {
   waiting: { label: "Waiting for a sweep", cls: "none" },
@@ -64,6 +66,8 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
     tf === "5m" ? Promise.resolve(null) : candles(inst, tf),
     quotes(list),
   ]);
+  const fav = (await getWatchlist()).some((w) => w.symbol === inst.id && w.market === (kind === "fx" ? "FX" : "CRYPTO"));
+  const star = <StarButton symbol={inst.id} market={kind === "fx" ? "FX" : "CRYPTO"} starred={fav} />;
   const strip = <InstrumentStrip kind={kind} list={list} quotes={qs} active={inst.id} tf={tf} />;
   if (!data) {
     return (
@@ -121,7 +125,7 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
                 {nextHigh ? <span className="pill watch">Next red {nextHigh.country}: {nextHigh.title} · {nyTime(nextHigh.time)} NY</span> : null}
               </div>
             </div>
-            <AutoRefresh seconds={data.live ? 15 : 60} />
+            <div className="row" style={{ gap: 8 }}>{star}<AutoRefresh seconds={data.live ? 15 : 60} /></div>
           </div>
         </section>
         <p className="note small" style={{ marginTop: 12 }}>
@@ -243,7 +247,7 @@ export default async function Desk({ kind, searchParams }: { kind: DeskKind; sea
               ) : null}
             </div>
           </div>
-          <AutoRefresh seconds={data.live ? 15 : 60} />
+          <div className="row" style={{ gap: 8 }}>{star}<AutoRefresh seconds={data.live ? 15 : 60} /></div>
         </div>
       </section>
 

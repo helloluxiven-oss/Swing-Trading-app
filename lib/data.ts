@@ -120,7 +120,9 @@ export async function getHoldings(): Promise<Holding[]> {
   return (data ?? []).map((r) => ({ ...(r as Holding), qty: Number(r.qty), avg_price: Number(r.avg_price) }));
 }
 
-export type Watch = { symbol: string; market: Market };
+/** Favourite markets: stocks (IN/US), forex & commodities (FX), crypto (CRYPTO). */
+export type FavMarket = Market | "FX" | "CRYPTO";
+export type Watch = { symbol: string; market: FavMarket };
 
 export async function getWatchlist(): Promise<Watch[]> {
   const supabase = await db();

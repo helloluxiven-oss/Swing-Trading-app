@@ -10,6 +10,8 @@ import { db, allowedEmail } from "@/lib/supabase/server";
 import { getSettings, recentClosed } from "@/lib/data";
 import { analyseOne } from "@/lib/scan";
 import { findStock } from "@/lib/universe";
+import { deskInstruments } from "@/lib/instruments";
+import type { FavMarket } from "@/lib/data";
 import { plan, resultR, type Market } from "@/lib/plan";
 import { runGate, type Check } from "@/lib/gate";
 import type { Side } from "@/lib/setup";
@@ -214,8 +216,12 @@ export async function importSheetHoldings() {
 // ---- favourites ------------------------------------------------------------
 
 /** Star / unstar a stock. Returns the new state. */
-export async function toggleWatch(symbol: string, market: Market): Promise<boolean> {
-  if (!findStock(symbol, market)) return false;
+export async function toggleWatch(symbol: string, market: FavMarket): Promise<boolean> {
+  const known =
+    market === "FX" ? deskInstruments("fx").some((i) => i.id === symbol)
+    : market === "CRYPTO" ? deskInstruments("crypto").some((i) => i.id === symbol)
+    : (market === "IN" || market === "US") && !!findStock(symbol, market);
+  if (!known) return false;
   const supabase = await db();
   const { data } = await supabase.from("watchlist").select("symbol").eq("symbol", symbol).eq("market", market).maybeSingle();
   if (data) {
@@ -224,5 +230,7 @@ export async function toggleWatch(symbol: string, market: Market): Promise<boole
     await supabase.from("watchlist").insert({ symbol, market });
   }
   revalidatePath("/");
+  revalidatePath("/fx");
+  revalidatePath("/crypto");
   return !data;
 }
