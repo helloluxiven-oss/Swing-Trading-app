@@ -6,12 +6,14 @@ import { money, pct, qtyFmt, tone } from "@/lib/format";
 import { importSheetHoldings, removeHolding } from "../actions";
 import AddHolding from "@/components/AddHolding";
 
+import AutoRefresh from "@/components/AutoRefresh";
+
 export const dynamic = "force-dynamic";
 
 export default async function PortfolioPage() {
   const [holdings, fx] = await Promise.all([getHoldings(), usdInr()]);
   const live = await mapLimit(holdings, 6, async (h) => {
-    const s = await getSeries(h.symbol, h.market, 120);
+    const s = await getSeries(h.symbol, h.market, 30);
     if (!s) return null;
     const e50 = ema(s.candles.map((c) => c.c), 50).at(-1) ?? null;
     return { price: s.quote.price, dayPct: s.quote.changePct, above50: e50 === null ? null : s.quote.price > e50 };
@@ -42,7 +44,7 @@ export default async function PortfolioPage() {
 
   return (
     <>
-      <h1>Portfolio</h1>
+      <div className="row between"><h1>Portfolio</h1><AutoRefresh seconds={30} /></div>
       <p className="sub">Live value of what you hold. Totals in rupees at today&apos;s USD/INR{fx ? ` (${fx.toFixed(2)})` : " — rate unavailable"}.</p>
 
       <div className="grid g3" style={{ marginBottom: 16 }}>

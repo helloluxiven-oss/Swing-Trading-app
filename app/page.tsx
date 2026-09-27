@@ -6,6 +6,8 @@ import { STATUS_LABEL } from "@/lib/setup";
 import { money, pct, tone } from "@/lib/format";
 import RuleDots from "@/components/RuleDots";
 
+import AutoRefresh from "@/components/AutoRefresh";
+
 export const dynamic = "force-dynamic";
 
 function Pulse({ s }: { s: MarketScan }) {
@@ -67,7 +69,7 @@ export default async function Today() {
 
   return (
     <>
-      <h1>Today</h1>
+      <div className="row between"><h1>Today</h1><AutoRefresh seconds={60} /></div>
       <p className="sub">Your setups in both markets, and whether you are allowed to act on them right now.</p>
 
       <div className="grid g3" style={{ marginBottom: 16 }}>

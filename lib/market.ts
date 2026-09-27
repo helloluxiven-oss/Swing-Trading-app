@@ -118,6 +118,6 @@ export async function mapLimit<T, R>(items: T[], limit: number, fn: (x: T) => Pr
 
 /** USD → INR for showing the US book in rupees. Falls back to null, never to a made-up rate. */
 export async function usdInr(): Promise<number | null> {
-  const s = await getSeries("USDINR=X", "US", 900);
+  const s = await getSeries("USDINR=X", "US", 300);
   return s?.quote.price ?? null;
 }

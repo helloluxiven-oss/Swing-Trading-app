@@ -5,6 +5,8 @@ import RuleDots from "@/components/RuleDots";
 import { money, pct, tone, ago } from "@/lib/format";
 import type { Market } from "@/lib/plan";
 
+import AutoRefresh from "@/components/AutoRefresh";
+
 export const dynamic = "force-dynamic";
 
 const RANK: Record<Status, number> = { confirmed: 3, ready: 2, watch: 1, none: 0 };
@@ -32,7 +34,7 @@ export default async function ScanPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <div className="row between" style={{ marginBottom: 6 }}>
-        <h1>Scanner</h1>
+        <div className="row"><h1>Scanner</h1><AutoRefresh seconds={60} /></div>
         <div className="row">
           <div className="seg">
             <Link className={market === "IN" ? "on" : ""} href={href("IN", filter)}>India · NIFTY 50</Link>

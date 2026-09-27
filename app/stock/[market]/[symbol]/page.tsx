@@ -10,6 +10,8 @@ import { money, pct, tone, ago } from "@/lib/format";
 import Chart from "@/components/Chart";
 import TradeGate from "@/components/TradeGate";
 
+import AutoRefresh from "@/components/AutoRefresh";
+
 export const dynamic = "force-dynamic";
 
 function RuleList({ r }: { r: SideResult }) {
@@ -69,6 +71,7 @@ export default async function StockPage({ params }: { params: Promise<{ market: 
           <div style={{ fontSize: 26, fontWeight: 700 }}>{money(quote.price, market)}</div>
           <div className={tone(quote.changePct)}>{money(quote.change, market)} ({pct(quote.changePct)})</div>
           <div className="small muted">{quote.marketOpen ? "Market open" : "Market closed"} · quote {ago(quote.time)}</div>
+          <div style={{ marginTop: 4 }}><AutoRefresh seconds={30} /></div>
         </div>
       </div>
 

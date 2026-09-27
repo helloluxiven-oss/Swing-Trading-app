@@ -6,6 +6,8 @@ import { money, qtyFmt, tone } from "@/lib/format";
 import { cancelTrade } from "../actions";
 import CloseTrade from "@/components/CloseTrade";
 
+import AutoRefresh from "@/components/AutoRefresh";
+
 export const dynamic = "force-dynamic";
 
 function stats(rs: number[]) {
@@ -19,7 +21,7 @@ export default async function JournalPage() {
   const trades = await getTrades();
   const open = trades.filter((t) => t.status === "open");
   const closed = trades.filter((t) => t.status === "closed");
-  const prices = await mapLimit(open, 6, (t) => getSeries(t.symbol, t.market, 60).then((s) => s?.quote.price ?? null));
+  const prices = await mapLimit(open, 6, (t) => getSeries(t.symbol, t.market, 30).then((s) => s?.quote.price ?? null));
 
   const all = stats(closed.map((t) => t.result_r ?? 0));
   const followed = stats(closed.filter((t) => t.followed_plan).map((t) => t.result_r ?? 0));
@@ -35,7 +37,7 @@ export default async function JournalPage() {
 
   return (
     <>
-      <h1>Journal</h1>
+      <div className="row between"><h1>Journal</h1><AutoRefresh seconds={30} /></div>
       <p className="sub">Every plan you logged, with its stop-loss and target locked. R = result divided by what you risked.</p>
 
       <div className="grid g3" style={{ marginBottom: 16 }}>
