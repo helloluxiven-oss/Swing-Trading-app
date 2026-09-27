@@ -53,12 +53,12 @@ type YahooChart = {
 };
 
 /**
- * Daily candles for ~1 year plus the live quote. Cached for `revalidate` seconds
+ * Daily candles for ~1 year (or 2) plus the live quote. Cached for `revalidate` seconds
  * so a page full of stocks does not hammer the source.
  */
-export async function getSeries(symbol: string, market: Market, revalidate = 300): Promise<Series | null> {
+export async function getSeries(symbol: string, market: Market, revalidate = 300, range: "1y" | "2y" = "1y"): Promise<Series | null> {
   const ys = yahooSymbol(symbol, market);
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ys)}?range=1y&interval=1d&includePrePost=false`;
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(ys)}?range=${range}&interval=1d&includePrePost=false`;
   try {
     const res = await fetch(url, { headers: { "User-Agent": UA }, next: { revalidate } });
     if (!res.ok) return null;
@@ -120,4 +120,30 @@ export async function mapLimit<T, R>(items: T[], limit: number, fn: (x: T) => Pr
 export async function usdInr(): Promise<number | null> {
   const s = await getSeries("USDINR=X", "US", 300);
   return s?.quote.price ?? null;
+}
+
+/**
+ * Intraday candles (5-minute by default) for the gold desk. Returns every bar,
+ * including the one still forming — the caller decides what counts as closed.
+ */
+export async function getIntraday(yahoo: string, interval = "5m", range = "5d", revalidate = 60): Promise<{ candles: Candle[]; price: number; time: number } | null> {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahoo)}?range=${range}&interval=${interval}&includePrePost=true`;
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": UA }, next: { revalidate } });
+    if (!res.ok) return null;
+    const data = (await res.json()) as YahooChart;
+    const r = data.chart.result?.[0];
+    if (!r || !r.timestamp) return null;
+    const q = r.indicators.quote[0];
+    const candles: Candle[] = [];
+    r.timestamp.forEach((t, i) => {
+      const o = q.open[i], h = q.high[i], l = q.low[i], c = q.close[i];
+      if (o == null || h == null || l == null || c == null) return;
+      candles.push({ t, o, h, l, c, v: q.volume[i] ?? 0 });
+    });
+    if (candles.length < 20) return null;
+    return { candles, price: r.meta.regularMarketPrice, time: r.meta.regularMarketTime };
+  } catch {
+    return null;
+  }
 }

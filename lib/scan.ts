@@ -8,11 +8,16 @@ import { INDEX, UNIVERSE, type Stock } from "./universe";
 import type { Market } from "./plan";
 import type { Candle } from "./indicators";
 
-export type Row = { stock: Stock; quote: Quote | null; analysis: Analysis | null };
+export type Row = { stock: Stock; quote: Quote | null; analysis: Analysis | null; spark: number[]; sparkT: number[] };
+
+/** Last ~6 months of closes (and their dates), for the mini and area charts. */
+const SPARK = 130;
+const sparkOf = (cs: Candle[] | undefined) => (cs ?? []).slice(-SPARK).map((c) => c.c);
+const sparkTOf = (cs: Candle[] | undefined) => (cs ?? []).slice(-SPARK).map((c) => c.t);
 
 export type MarketScan = {
   market: Market;
-  index: { name: string; quote: Quote | null; ctx: IndexContext };
+  index: { name: string; quote: Quote | null; ctx: IndexContext; spark: number[]; sparkT: number[] };
   rows: Row[];
   scannedAt: number;
 };
@@ -27,9 +32,14 @@ export async function scanMarket(market: Market): Promise<MarketScan> {
   const index = await getIndex(market);
   const rows = await mapLimit(UNIVERSE[market], 8, async (stock): Promise<Row> => {
     const s = await getSeries(stock.symbol, market, 90);
-    return { stock, quote: s?.quote ?? null, analysis: s ? analyse(s.candles, index.ctx) : null };
+    return { stock, quote: s?.quote ?? null, analysis: s ? analyse(s.candles, index.ctx) : null, spark: sparkOf(s?.candles), sparkT: sparkTOf(s?.candles) };
   });
-  return { market, index: { name: index.name, quote: index.quote, ctx: index.ctx }, rows, scannedAt: Date.now() };
+  return {
+    market,
+    index: { name: index.name, quote: index.quote, ctx: index.ctx, spark: sparkOf(index.candles ?? undefined), sparkT: sparkTOf(index.candles ?? undefined) },
+    rows,
+    scannedAt: Date.now(),
+  };
 }
 
 export async function analyseOne(stock: Stock): Promise<{

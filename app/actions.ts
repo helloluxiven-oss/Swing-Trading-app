@@ -210,3 +210,19 @@ export async function importSheetHoldings() {
   ]);
   revalidatePath("/portfolio");
 }
+
+// ---- favourites ------------------------------------------------------------
+
+/** Star / unstar a stock. Returns the new state. */
+export async function toggleWatch(symbol: string, market: Market): Promise<boolean> {
+  if (!findStock(symbol, market)) return false;
+  const supabase = await db();
+  const { data } = await supabase.from("watchlist").select("symbol").eq("symbol", symbol).eq("market", market).maybeSingle();
+  if (data) {
+    await supabase.from("watchlist").delete().eq("symbol", symbol).eq("market", market);
+  } else {
+    await supabase.from("watchlist").insert({ symbol, market });
+  }
+  revalidatePath("/");
+  return !data;
+}

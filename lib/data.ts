@@ -119,3 +119,11 @@ export async function getHoldings(): Promise<Holding[]> {
   const { data } = await supabase.from("holdings").select("*").order("created_at");
   return (data ?? []).map((r) => ({ ...(r as Holding), qty: Number(r.qty), avg_price: Number(r.avg_price) }));
 }
+
+export type Watch = { symbol: string; market: Market };
+
+export async function getWatchlist(): Promise<Watch[]> {
+  const supabase = await db();
+  const { data } = await supabase.from("watchlist").select("symbol,market").order("created_at");
+  return (data ?? []) as Watch[];
+}

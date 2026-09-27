@@ -3,13 +3,18 @@
 
 import { NextResponse } from "next/server";
 import { getSeries } from "@/lib/market";
+import { goldCandles, goldNews, usdEvents } from "@/lib/gold";
+import { analyseLiquidity } from "@/lib/liquidity";
 import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/lib/config";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   const t0 = Date.now();
-  const [nifty, spx, reliance, nvda] = await Promise.all([
+  const [gold, news, events, nifty, spx, reliance, nvda] = await Promise.all([
+    goldCandles(),
+    goldNews(3),
+    usdEvents(),
     getSeries("^NSEI", "IN", 30),
     getSeries("^GSPC", "US", 30),
     getSeries("RELIANCE", "IN", 30),
@@ -27,6 +32,11 @@ export async function GET() {
   const body = {
     ok: !!(nifty && spx && reliance && nvda) && db === "ok",
     market: { nifty50: q(nifty), sp500: q(spx), reliance: q(reliance), nvda: q(nvda) },
+    gold: gold
+      ? { source: gold.source, price: gold.price, candles5m: gold.candles.length, stage: analyseLiquidity(gold.candles)?.stage ?? null }
+      : null,
+    news: news.length,
+    usdEvents: events.length,
     database: db,
     ms: Date.now() - t0,
     at: new Date().toISOString(),
