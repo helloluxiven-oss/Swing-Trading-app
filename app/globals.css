@@ -552,3 +552,41 @@ details summary { cursor: pointer; }
 .install-banner img { border-radius: 10px; }
 .install-banner div { display: flex; flex-direction: column; min-width: 0; }
 .install-x { background: none; border: 0; color: var(--ink-3); font-size: 16px; cursor: pointer; padding: 4px; }
+
+/* ---- F&O desk ---- */
+.fno-tabs, .fno-expiries { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+.fno-tabs a { padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--ink-2); font-weight: 600; }
+.fno-tabs a.on { color: var(--ink); border-color: var(--accent); background: var(--violet-bg); }
+.fno-expiries a { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-soft); color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.fno-expiries a.on { color: var(--ink); border-color: var(--accent); }
+.fno-svg { width: 100%; height: auto; display: block; }
+.fno-svg .fno-strike { font: 600 11px Inter, system-ui, sans-serif; fill: var(--ink-2); }
+.fno-svg .fno-val { font: 10px Inter, system-ui, sans-serif; fill: var(--ink-3); }
+.fno-svg .fno-mark { font: 600 10px Inter, system-ui, sans-serif; }
+.tbl.greeks { font-size: 12px; font-variant-numeric: tabular-nums; }
+.tbl.greeks th.strike, .tbl.greeks td.strike { text-align: center; font-weight: 700; background: var(--card-2); }
+.tbl.greeks tr.atm td { background: rgba(179, 157, 251, 0.1); }
+.tbl.greeks td.itm { background: rgba(251, 191, 36, 0.06); }
+.strat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.strat { display: flex; flex-direction: column; gap: 10px; }
+.strat.best { border-color: #1e4a2e; box-shadow: 0 0 26px -12px rgba(34, 197, 94, 0.55); }
+.payoff { width: 100%; height: auto; background: #0b0e11; border-radius: 10px; }
+.legs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; font-size: 12px; }
+.legs li { padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+.legs li.buy { background: var(--up-bg); color: var(--up); }
+.legs li.sell { background: var(--down-bg); color: var(--down); }
+.strat-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.strat-stats > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.strat-stats b { font-size: 13px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.why { margin: 0; padding-left: 16px; font-size: 12px; color: var(--ink-2); }
+.flow { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: center; }
+.flow-bar { position: relative; height: 10px; border-radius: 5px; background: var(--card-2); }
+.flow-bar::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 1px; background: var(--line); }
+.flow-bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+.flow-bar i.pos { left: 50%; background: var(--up); }
+.flow-bar i.neg { right: 50%; background: var(--down); }
+@media (max-width: 900px) {
+  .strat-grid { grid-template-columns: 1fr; }
+  .strat-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fno-expiries { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
+}

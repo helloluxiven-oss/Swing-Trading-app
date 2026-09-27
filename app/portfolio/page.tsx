@@ -95,7 +95,7 @@ export default async function PortfolioPage() {
               <span className={tone(day)}>· {day === null ? "—" : `${day >= 0 ? "+" : "−"}${inr(Math.abs(day))}`} today</span>
             </div>
           </div>
-          <AutoRefresh seconds={30} />
+          <div className="row" style={{ gap: 8 }}><a href="/journal" className="btn small">📓 Trade journal</a><AutoRefresh seconds={30} /></div>
         </div>
       </section>
 

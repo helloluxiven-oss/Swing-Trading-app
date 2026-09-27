@@ -78,6 +78,7 @@ export default async function SettingsPage() {
         <h2>📦 Your data</h2>
         <p className="small muted">Download everything you logged — open it in Excel or Google Sheets.</p>
         <div className="row">
+          <a className="btn" href="/journal">📓 Open the trade journal</a>
           <a className="btn" href="/api/export/trades">⬇ Trade journal (CSV)</a>
           <a className="btn" href="/api/export/holdings">⬇ Portfolio holdings (CSV)</a>
         </div>
