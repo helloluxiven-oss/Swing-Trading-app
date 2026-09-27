@@ -3,22 +3,53 @@
 
 import "server-only";
 import { getIntraday } from "./market";
+import type { Candle } from "./indicators";
 
 /**
- * Yahoo first tries spot (XAUUSD=X); if that is not served it falls back to
- * COMEX gold futures (GC=F), which trade a few dollars above OANDA spot. The
- * page says which one it is using — levels are relative, so the strategy works
- * on either, but don't copy absolute prices onto a spot chart without checking.
+ * Source order:
+ * 1. OANDA XAU_USD (real-time spot, the same feed as the TradingView OANDA
+ *    chart) when OANDA_TOKEN is set on the server. A free practice-account
+ *    token is enough — it only reads prices, it cannot trade on its own.
+ * 2. Yahoo spot (XAUUSD=X), then COMEX futures (GC=F). Free, but delayed, and
+ *    futures trade a few dollars above spot. The page says which one it used.
  */
+export const OANDA_ON = !!process.env.OANDA_TOKEN;
+
+type OandaCandles = { candles?: { complete: boolean; volume: number; time: string; mid?: { o: string; h: string; l: string; c: string } }[] };
+
+async function oandaCandles() {
+  const token = process.env.OANDA_TOKEN;
+  if (!token) return null;
+  const host = process.env.OANDA_ENV === "live" ? "api-fxtrade.oanda.com" : "api-fxpractice.oanda.com";
+  try {
+    const res = await fetch(`https://${host}/v3/instruments/XAU_USD/candles?granularity=M5&count=1500&price=M`, {
+      headers: { Authorization: `Bearer ${token}`, "Accept-Datetime-Format": "UNIX" },
+      next: { revalidate: 10 },
+    });
+    if (!res.ok) return null;
+    const data = (await res.json()) as OandaCandles;
+    const candles: Candle[] = (data.candles ?? [])
+      .filter((c) => c.mid)
+      .map((c) => ({ t: Math.floor(Number(c.time)), o: +c.mid!.o, h: +c.mid!.h, l: +c.mid!.l, c: +c.mid!.c, v: c.volume }));
+    if (candles.length < 20) return null;
+    const last = candles[candles.length - 1];
+    return { candles, price: last.c, time: Math.floor(Date.now() / 1000), source: "OANDA XAU/USD spot · real-time", symbol: "XAU_USD", live: true };
+  } catch {
+    return null;
+  }
+}
+
 const SOURCES = [
-  { symbol: "XAUUSD=X", label: "XAU/USD spot" },
-  { symbol: "GC=F", label: "COMEX gold futures (GC=F)" },
+  { symbol: "XAUUSD=X", label: "XAU/USD spot (Yahoo, delayed)" },
+  { symbol: "GC=F", label: "COMEX gold futures GC=F (Yahoo, delayed ~10 min, trades above spot)" },
 ];
 
 export async function goldCandles() {
+  const o = await oandaCandles();
+  if (o) return o;
   for (const s of SOURCES) {
     const d = await getIntraday(s.symbol, "5m", "5d", 60);
-    if (d) return { ...d, source: s.label, symbol: s.symbol };
+    if (d) return { ...d, source: s.label, symbol: s.symbol, live: false };
   }
   return null;
 }

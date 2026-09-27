@@ -33,7 +33,7 @@ export async function GET() {
     ok: !!(nifty && spx && reliance && nvda) && db === "ok",
     market: { nifty50: q(nifty), sp500: q(spx), reliance: q(reliance), nvda: q(nvda) },
     gold: gold
-      ? { source: gold.source, price: gold.price, candles5m: gold.candles.length, stage: analyseLiquidity(gold.candles)?.stage ?? null }
+      ? { source: gold.source, live: gold.live, price: gold.price, candles5m: gold.candles.length, stage: analyseLiquidity(gold.candles)?.stage ?? null }
       : null,
     news: news.length,
     usdEvents: events.length,

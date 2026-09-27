@@ -23,6 +23,18 @@ const f2 = (x: number | null | undefined) => (x == null ? "—" : x.toLocaleStri
 const nyTime = (t: number) =>
   new Intl.DateTimeFormat("en-US", { timeZone: "America/New_York", weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(t * 1000));
 
+/** Today's 08:00–12:00 New York window in the viewer's timezone (handles daylight saving on both sides). */
+function nyWindowLocal(tz: string) {
+  const now = Math.floor(Date.now() / 1000);
+  const ny = new Date((now + tzOffset(now)) * 1000);
+  const at = (h: number) => {
+    const guess = Date.UTC(ny.getUTCFullYear(), ny.getUTCMonth(), ny.getUTCDate(), h) / 1000;
+    return guess - tzOffset(guess);
+  };
+  const f = (t: number) => new Intl.DateTimeFormat("en-GB", { timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(t * 1000));
+  return `${f(at(8))}–${f(at(12))}`;
+}
+
 export default async function GoldPage() {
   const [data, news, events, settings] = await Promise.all([goldCandles(), goldNews(), usdEvents(), getSettings()]);
   if (!data) {
@@ -97,10 +109,20 @@ export default async function GoldPage() {
               ) : null}
             </div>
           </div>
-          <AutoRefresh seconds={60} />
+          <AutoRefresh seconds={data.live ? 15 : 60} />
         </div>
       </section>
 
+      {!data.live && (
+        <div className="note warn" style={{ marginTop: 12 }}>
+          Delayed feed: {data.source}. Levels here will not match your OANDA chart exactly — use the stages and R multiples, and read prices off your own chart. Real-time OANDA spot switches on as soon as an OANDA token is added.
+        </div>
+      )}
+      {r && r.current !== "New York" && (
+        <div className="note" style={{ marginTop: 12 }}>
+          <b>Your session is New York</b> — 08:00–12:00 New York = {nyWindowLocal(settings.timezone)} your time. {r.current === "London" ? "London is running now: its high and low are the liquidity your NY trade will sweep. Mark them, don't trade them." : "Outside NY hours: plan only, no entries."}
+        </div>
+      )}
       <div className={`card decide ${st.cls}`}>
         <div className="small muted">What to do now · previous-session liquidity sweep</div>
         <h2 style={{ margin: "4px 0 6px" }}>{r?.headline ?? "No analysis"}</h2>

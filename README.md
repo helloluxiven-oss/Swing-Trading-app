@@ -96,6 +96,8 @@ variables, if set in Vercel, override the defaults:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key |
 | `ALLOWED_EMAIL` | the one email allowed to sign in |
+| `OANDA_TOKEN` | *(optional, secret)* OANDA API token — switches the Gold desk to real-time XAU/USD spot |
+| `OANDA_ENV` | `practice` (default) or `live`, matching the account the token belongs to |
 
 ```
 npm install
